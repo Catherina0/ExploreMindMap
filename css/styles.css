@@ -1,0 +1,99 @@
+/* 基础样式 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.header {
+    padding: 10px 20px;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ddd;
+}
+
+h1 {
+    font-size: 1.5rem;
+    color: #333;
+    text-align: center;
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 按钮通用样式 */
+.btn {
+    padding: 6px 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn:hover {
+    background-color: #45a049;
+}
+
+/* 工具栏 */
+#toolbar {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* 下拉菜单 */
+.btn-group {
+    position: relative;
+    display: inline-block;
+}
+
+#save_dropdown {
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 4px;
+    overflow: hidden;
+    display: none;
+}
+
+#save_dropdown a {
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    color: black;
+}
+
+#save_dropdown a:hover {
+    background-color: #f1f1f1;
+}
+
+/* 加载指示器 */
+#loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    display: none;
+    z-index: 999;
+}

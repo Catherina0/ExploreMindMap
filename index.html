@@ -4,267 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI思维导图编辑器</title>
-    <!-- 使用正确的CDN链接 -->
+    <!-- 外部样式表 -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/mindmap.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <!-- jsMind样式 -->
     <link rel="stylesheet" href="https://unpkg.com/jsmind@0.8.6/style/jsmind.css" />
-    <!-- 引入OpenAI客户端库 -->
+    <!-- KaTeX样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+    <!-- OpenAI客户端库 -->
     <script src="https://cdn.jsdelivr.net/npm/openai@4.24.1/dist/index.min.js"></script>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .header {
-            padding: 10px 20px;
-            background-color: #f1f1f1;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        h1 {
-            font-size: 1.5rem;
-            color: #333;
-            text-align: center;
-        }
-        
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-        
-        .mindmap-container {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            height: 100%;
-            overflow: hidden;
-        }
-        
-        #toolbar {
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        
-        .btn {
-            padding: 6px 12px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .btn:hover {
-            background-color: #45a049;
-        }
-        
-        #theme_select {
-            padding: 6px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            font-size: 0.9rem;
-        }
-        
-        #jsmind_container {
-            flex: 1;
-            position: relative;
-            background: #f9f9f9;
-            overflow: hidden;
-        }
-        
-        /* 缩放控制器 */
-        #zoom_controller {
-            padding: 8px;
-            background-color: #f5f5f5;
-            border-top: 1px solid #ddd;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        #zoom_controller button {
-            padding: 4px 10px;
-            background-color: #607D8B;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        #zoom_in, #zoom_out {
-            font-weight: bold;
-            width: 30px;
-        }
-        
-        #zoom_text {
-            min-width: 60px;
-            text-align: center;
-        }
-        
-        /* DeepSeek风格的聊天区域 */
-        .chat-container {
-            width: 350px;
-            border-left: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            background-color: #fff;
-        }
-        
-        .chat-header {
-            padding: 15px;
-            background-color: #f5f5f5;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .settings-toggle {
-            cursor: pointer;
-            color: #555;
-        }
-        
-        #api_settings {
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-bottom: 1px solid #ddd;
-            overflow: hidden;
-            transition: max-height 0.3s ease, opacity 0.3s ease;
-            max-height: 0;
-            opacity: 0;
-        }
-        
-        #api_settings.show {
-            max-height: 200px;
-            opacity: 1;
-            padding: 15px;
-        }
-        
-        .setting-group {
-            margin-bottom: 15px;
-        }
-        
-        .setting-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        
-        .setting-group select, 
-        .setting-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: white;
-        }
-        
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .message {
-            margin-bottom: 15px;
-            max-width: 85%;
-            border-radius: 8px;
-            padding: 10px 12px;
-            position: relative;
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-        
-        .ai-message {
-            background-color: #f1f1f1;
-            align-self: flex-start;
-            margin-right: auto;
-        }
-        
-        .user-message {
-            background-color: #dcf8c6;
-            align-self: flex-end;
-            margin-left: auto;
-            text-align: right;
-        }
-        
-        .chat-controls {
-            padding: 10px 15px;
-            background-color: #f5f5f5;
-            border-top: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-        }
-        
-        #chat_input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-            resize: none;
-            height: 44px;
-            min-height: 44px;
-            max-height: 120px;
-            font-family: inherit;
-            overflow-y: auto;
-        }
-        
-        #send_button {
-            padding: 8px 15px;
-            margin-left: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-        
-        .suggestions-list {
-            margin-top: 5px;
-            margin-bottom: 10px;
-        }
-        
-        .apply-button {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            display: none;
-            z-index: 999;
-        }
-    </style>
 </head>
 <body>
     <div class="header">
@@ -275,21 +24,7 @@
         <!-- 思维导图区域 -->
         <div class="mindmap-container">
             <!-- 工具栏 -->
-            <div id="toolbar">
-                <button class="btn" id="add_node">添加节点</button>
-                <button class="btn" id="edit_node">编辑节点</button>
-                <button class="btn" id="delete_node">删除节点</button>
-                <button class="btn" id="expand_all">展开全部</button>
-                <button class="btn" id="collapse_all">折叠全部</button>
-                <select id="theme_select" title="选择主题">
-                    <option value="primary">蓝色主题</option>
-                    <option value="warning">黄色主题</option>
-                    <option value="danger">红色主题</option>
-                    <option value="success">绿色主题</option>
-                </select>
-                <button class="btn" id="save_map">保存</button>
-                <button class="btn" id="load_map">加载</button>
-            </div>
+            <div id="toolbar"></div>
             
             <!-- 思维导图容器 -->
             <div id="jsmind_container">
@@ -306,16 +41,22 @@
             </div>
         </div>
         
-        <!-- DeepSeek风格的AI对话区域 -->
+        <!-- AI对话区域 -->
         <div class="chat-container">
             <!-- 聊天头部 -->
             <div class="chat-header">
                 <span>AI思维导图助手</span>
-                <span class="settings-toggle" id="settings_toggle">⚙️ 设置</span>
             </div>
             
-            <!-- API设置面板(修复) -->
-            <div id="api_settings" class="show"> <!-- 默认显示设置面板 -->
+            <!-- 聊天控制区域 -->
+            <div class="chat-top-controls">
+                <button id="new_conversation" class="btn">新对话</button>
+                <button id="ai_toggle" class="btn">开启AI助手</button>
+                <button id="settings_toggle" class="btn">⚙️ 设置</button>
+            </div>
+            
+            <!-- API设置面板 -->
+            <div id="api_settings">
                 <div class="setting-group">
                     <label for="ai_service">AI服务:</label>
                     <select id="ai_service">
@@ -344,12 +85,145 @@
         </div>
     </div>
     
-    <!-- 修正jsMind脚本引用 -->
+    <!-- LaTeX侧边栏编辑器 -->
+    <div class="sidebar-editor" id="latex_sidebar">
+        <div class="sidebar-header">
+            <h3>公式</h3>
+            <span class="sidebar-close">&times;</span>
+        </div>
+        <div class="sidebar-content">
+            <textarea class="latex-input" id="sidebar_latex_formula" placeholder="请输入LaTeX语法"></textarea>
+            
+            <div class="preview-area" id="sidebar_latex_preview"></div>
+            
+            <button class="complete-button" id="sidebar_latex_apply">完成</button>
+            
+            <div class="common-formulas-title">常用公式</div>
+            <table class="formula-table">
+                <tr>
+                    <td><span>a^2</span></td>
+                    <td><code>a^2</code></td>
+                </tr>
+                <tr>
+                    <td><span>a_2</span></td>
+                    <td><code>a_2</code></td>
+                </tr>
+                <tr>
+                    <td><span>a^{2+2}</span></td>
+                    <td><code>a^{2+2}</code></td>
+                </tr>
+                <tr>
+                    <td><span>a_{i,j}</span></td>
+                    <td><code>a_{i,j}</code></td>
+                </tr>
+                <tr>
+                    <td><span>x_2^3</span></td>
+                    <td><code>x_2^3</code></td>
+                </tr>
+                <tr>
+                    <td><span>\frac{1}{2}</span></td>
+                    <td><code>\frac{1}{2}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\sqrt{x}</span></td>
+                    <td><code>\sqrt{x}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\sqrt[3]{x}</span></td>
+                    <td><code>\sqrt[3]{x}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\sum_{i=1}^n i^2</span></td>
+                    <td><code>\sum_{i=1}^n i^2</code></td>
+                </tr>
+                <tr>
+                    <td><span>\prod_{i=1}^n x_i</span></td>
+                    <td><code>\prod_{i=1}^n x_i</code></td>
+                </tr>
+                <tr>
+                    <td><span>\int_a^b f(x) dx</span></td>
+                    <td><code>\int_a^b f(x) dx</code></td>
+                </tr>
+                <tr>
+                    <td><span>\lim_{x \to \infty} f(x)</span></td>
+                    <td><code>\lim_{x \to \infty} f(x)</code></td>
+                </tr>
+                <tr>
+                    <td><span>e^{i\pi} + 1 = 0</span></td>
+                    <td><code>e^{i\pi} + 1 = 0</code></td>
+                </tr>
+                <tr>
+                    <td><span>\sin^2 \theta + \cos^2 \theta = 1</span></td>
+                    <td><code>\sin^2 \theta + \cos^2 \theta = 1</code></td>
+                </tr>
+                <tr>
+                    <td><span>\vec{F} = m\vec{a}</span></td>
+                    <td><code>\vec{F} = m\vec{a}</code></td>
+                </tr>
+                <tr>
+                    <td><span>P(A|B) = \frac{P(B|A)P(A)}{P(B)}</span></td>
+                    <td><code>P(A|B) = \frac{P(B|A)P(A)}{P(B)}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\binom{n}{k} = \frac{n!}{k!(n-k)!}</span></td>
+                    <td><code>\binom{n}{k} = \frac{n!}{k!(n-k)!}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\begin{pmatrix} a & b \\ c & d \end{pmatrix}</span></td>
+                    <td><code>\begin{pmatrix} a & b \\ c & d \end{pmatrix}</code></td>
+                </tr>
+                <tr>
+                    <td><span>f'(x) = \lim_{h \to 0}\frac{f(x+h)-f(x)}{h}</span></td>
+                    <td><code>f'(x) = \lim_{h \to 0}\frac{f(x+h)-f(x)}{h}</code></td>
+                </tr>
+                <tr>
+                    <td><span>\begin{cases} x + y = 1 \\ 2x - y = 0 \end{cases}</span></td>
+                    <td><code>\begin{cases} x + y = 1 \\ 2x - y = 0 \end{cases}</code></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 备注编辑器 -->
+    <div class="sidebar-editor" id="note_editor">
+        <div class="sidebar-header">
+            <h3>节点备注</h3>
+            <span class="sidebar-close">&times;</span>
+        </div>
+        <div class="sidebar-content">
+            <div class="editor-section">
+                <textarea id="node_note" class="node-textarea" placeholder="输入节点备注..."></textarea>
+            </div>
+        </div>
+        <div class="button-row">
+            <button class="cancel" id="note_cancel">取消</button>
+            <button class="apply" id="note_apply">应用</button>
+        </div>
+    </div>
+    
+    <!-- 摘要编辑器 -->
+    <div class="sidebar-editor" id="summary_editor">
+        <div class="sidebar-header">
+            <h3>节点摘要</h3>
+            <span class="sidebar-close">&times;</span>
+        </div>
+        <div class="sidebar-content">
+            <div class="editor-section">
+                <input type="text" id="node_summary" placeholder="输入简短摘要..." style="width:100%; padding:8px;">
+            </div>
+        </div>
+        <div class="button-row">
+            <button class="cancel" id="summary_cancel">取消</button>
+            <button class="apply" id="summary_apply">应用</button>
+        </div>
+    </div>
+
+    <!-- 脚本文件 -->
     <script src="https://unpkg.com/jsmind@0.8.6/es6/jsmind.js"></script>
     <script src="https://unpkg.com/jsmind@0.8.6/es6/jsmind.draggable-node.js"></script>
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
     
-    <!-- 添加解决触摸事件被动监听器警告的脚本 -->
+    <!-- 触摸事件处理脚本 -->
     <script>
         // 页面加载后处理触摸事件监听器
         window.addEventListener('load', function() {
@@ -370,5 +244,11 @@
             };
         });
     </script>
+    
+    <!-- 应用JS文件，调整加载顺序 -->
+    <script src="js/mindmap.js"></script>
+    <script src="js/latex-editor.js"></script>
+    <script src="js/ai-assistant.js"></script>
+    <script src="js/core.js"></script>
 </body>
-</html> 
+</html>

@@ -1,0 +1,230 @@
+/* 思维导图容器样式 */
+.mindmap-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+}
+
+#jsmind_container {
+    flex: 1;
+    position: relative;
+    background: #f9f9f9;
+    overflow: hidden;
+}
+
+/* 缩放控制器 */
+#zoom_controller {
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+#zoom_controller button {
+    padding: 4px 10px;
+    background-color: #607D8B;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#zoom_in, #zoom_out {
+    font-weight: bold;
+    width: 30px;
+}
+
+#zoom_text {
+    min-width: 60px;
+    text-align: center;
+}
+
+/* 主题选择 */
+#theme_select {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 0.9rem;
+}
+
+/* 节点指示器样式 */
+.formula-indicator {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #9c27b0;
+}
+
+.has-note {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    background: #ff9800;
+    border-radius: 50%;
+}
+
+/* 关联线样式 */
+.relation-line {
+    stroke: #2196F3;
+    stroke-width: 1.5px;
+    stroke-dasharray: 5,3;
+    fill: none;
+}
+
+/* 摘要样式 */
+.node-summary {
+    font-size: 12px;
+    color: #777;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+#toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+    min-height: 40px;
+    width: 100%;
+}
+
+#toolbar .btn {
+    margin: 2px 5px;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    border: 1px solid #45a049;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    color: white;
+}
+
+#toolbar .btn:hover {
+    background-color: #45a049;
+    border-color: #388e3c;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#toolbar select {
+    margin: 2px 5px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#toolbar .btn-group {
+    position: relative;
+    display: inline-block;
+    margin: 2px 5px;
+}
+
+#save_dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-width: 120px;
+    z-index: 10;
+}
+
+#save_dropdown a {
+    display: block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #333;
+}
+
+#save_dropdown a:hover {
+    background-color: #f5f5f5;
+}
+
+#load_dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-width: 120px;
+    z-index: 10;
+}
+
+#load_dropdown a {
+    display: block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #333;
+}
+
+#load_dropdown a:hover {
+    background-color: #f5f5f5;
+}
+
+.node-note-popup {
+    position: absolute;
+    z-index: 1000;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    max-width: 450px;
+    max-height: 300px;
+    min-width: 250px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #333;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.node-note-popup::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 15px;
+    width: 12px;
+    height: 12px;
+    background-color: #fff;
+    transform: rotate(45deg);
+    border-left: 1px solid #ddd;
+    border-top: 1px solid #ddd;
+}
+
+.node-note-popup .close-btn {
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: #888;
+}
+
+.node-note-popup .close-btn:hover {
+    color: #333;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -30,6 +30,22 @@ function initChat() {
         settingsPanel.classList.toggle('show');
     });
     
+    // 绑定修改思维导图按钮
+    document.getElementById('modify_mindmap').addEventListener('click', function() {
+        console.log('用户请求修改思维导图');
+        requestMindmapModification();
+    });
+    
+    // 绑定AI服务类型切换
+    document.getElementById('ai_service').addEventListener('change', function() {
+        const azureSettings = document.querySelector('.azure-settings');
+        if (this.value === 'azure' && azureSettings) {
+            azureSettings.style.display = 'block';
+        } else if (azureSettings) {
+            azureSettings.style.display = 'none';
+        }
+    });
+    
     // 绑定聊天输入框自动调整高度
     document.getElementById('chat_input').addEventListener('input', function() {
         this.style.height = 'auto';
@@ -177,7 +193,22 @@ function getMindmapStructure() {
     }
 }
 
-// 应用AI建议的修改
+// 获取节点的路径
+function getNodePath(node) {
+    const path = [];
+    let current = node;
+    
+    while (current) {
+        if (current.topic) {
+            path.unshift(current.topic);
+        }
+        current = current.parent;
+    }
+    
+    return path;
+}
+
+// 修改思维导图节点
 function applyAISuggestions(modifications) {
     console.log('正在应用思维导图修改:', modifications);
     if (!selectedNode) {
@@ -189,30 +220,61 @@ function applyAISuggestions(modifications) {
     let modificationLog = [];
     
     try {
+        // 确保有效的节点ID
+        if (!selectedNode.id || typeof selectedNode.id !== 'string') {
+            console.error('选中节点没有有效ID:', selectedNode);
+            throw new Error('选中节点没有有效ID');
+        }
+        
+        // 获取节点对象，确保它存在于jsMind中
+        const nodeObj = jm.get_node(selectedNode.id);
+        if (!nodeObj) {
+            console.error('无法在jsMind中找到节点:', selectedNode.id);
+            throw new Error(`无法找到节点: ${selectedNode.id}`);
+        }
+        
+        console.log('成功找到节点:', {id: nodeObj.id, topic: nodeObj.topic});
+        
         modifications.forEach(mod => {
             console.log(`处理修改: ${mod.action} - "${mod.topic}"`);
             
             switch (mod.action) {
                 case '添加子节点':
                     const newNodeId = generateUniqueID();
-                    jm.add_node(selectedNode, newNodeId, mod.topic);
+                    console.log(`添加子节点: 父节点ID=${nodeObj.id}, 新节点ID=${newNodeId}, 内容="${mod.topic}"`);
+                    jm.add_node(nodeObj.id, newNodeId, mod.topic);
                     modificationLog.push(`- 已添加子节点: "${mod.topic}"`);
                     break;
                     
                 case '修改当前节点':
-                    const oldTopic = selectedNode.topic;
-                    jm.update_node(selectedNode.id, mod.topic);
+                    const oldTopic = nodeObj.topic;
+                    console.log(`修改节点: ID=${nodeObj.id}, 旧内容="${oldTopic}", 新内容="${mod.topic}"`);
+                    jm.update_node(nodeObj.id, mod.topic);
                     modificationLog.push(`- 已将节点"${oldTopic}"修改为"${mod.topic}"`);
                     break;
                     
                 case '添加兄弟节点':
-                    if (selectedNode.parent) {
+                    if (nodeObj.parent) {
+                        const parentId = nodeObj.parent.id;
                         const siblingId = generateUniqueID();
-                        jm.add_node(selectedNode.parent, siblingId, mod.topic);
+                        console.log(`添加兄弟节点: 父节点ID=${parentId}, 新节点ID=${siblingId}, 内容="${mod.topic}"`);
+                        jm.add_node(parentId, siblingId, mod.topic);
                         modificationLog.push(`- 已添加兄弟节点: "${mod.topic}"`);
                     } else {
                         console.warn('无法添加兄弟节点：当前节点没有父节点');
                         modificationLog.push(`- 无法添加兄弟节点"${mod.topic}"：当前为根节点`);
+                    }
+                    break;
+                
+                case '添加注释':
+                    // 如果有添加注释的操作，调用addNodeNote
+                    if (typeof addNodeNote === 'function') {
+                        console.log(`添加注释: 节点ID=${nodeObj.id}, 内容="${mod.topic}"`);
+                        addNodeNote(nodeObj.id, mod.topic);
+                        modificationLog.push(`- 已添加注释: "${mod.topic}"`);
+                    } else {
+                        console.warn('添加注释功能不可用');
+                        modificationLog.push(`- 无法添加注释: 功能不可用`);
                     }
                     break;
                     
@@ -224,6 +286,14 @@ function applyAISuggestions(modifications) {
         
         // 显示修改结果
         addMessage('ai', `已应用以下修改:\n${modificationLog.join('\n')}`);
+        
+        // 更新关系线和注释标记
+        if (typeof updateRelationLines === 'function') {
+            updateRelationLines();
+        }
+        if (typeof renderAllNoteMarkers === 'function') {
+            renderAllNoteMarkers();
+        }
     } catch (error) {
         console.error('应用修改失败:', error);
         addMessage('ai', `应用修改时出错: ${error.message}`);
@@ -248,211 +318,232 @@ async function processAIRequest(query) {
         
         // 首次查询，获取完整思维导图结构
         if (isFirstQuery) {
-            console.log('首次AI查询，获取完整思维导图结构');
-            const mindmapStructure = getMindmapStructure();
+            console.log('首次查询，添加思维导图结构信息');
+            prompt = `请协助我处理这个思维导图。思维导图结构如下：\n${getMindmapStructure()}\n\n`;
             
-            // 构建包含完整结构的提示信息
-            prompt = `您是一个思维导图助手。下面是当前思维导图的完整结构：\n\n`;
-            prompt += `所有节点：\n`;
-            mindmapStructure.allNodes.forEach(node => {
-                prompt += `- ${node.topic} (ID: ${node.id}, ${node.isRoot ? '根节点' : `父节点ID: ${node.parentId}`})\n`;
-            });
-            
-            prompt += `\n当前选中的节点是: ${mindmapStructure.selectedNode ? mindmapStructure.selectedNode.topic : '无'}\n\n`;
-            prompt += `用户问题: "${query}"\n\n`;
-            prompt += `请回答用户问题。如果需要修改思维导图，请用特定格式给出建议：\n`;
-            prompt += `- 添加子节点: "节点内容"\n- 修改当前节点: "新节点内容"\n- 添加兄弟节点: "节点内容"\n`;
-            prompt += `所有修改建议需要在回答后单独列出，便于用户选择是否应用。`;
-            
-            isFirstQuery = false;
-        } else {
-            // 后续查询，包含当前节点及其子节点信息
-            const nodeTopic = selectedNode ? selectedNode.topic : "未选择节点";
-            let childrenInfo = "";
-            
-            if (selectedNode && selectedNode.id) {
-                childrenInfo = getChildrenInfo(selectedNode);
-                if (childrenInfo) {
-                    childrenInfo = `\n当前节点的子节点:\n${childrenInfo}`;
+            // 如果有选中的节点，添加节点信息
+            if (selectedNode) {
+                prompt += `当前选中的节点是: "${selectedNode.topic}"\n`;
+                
+                // 添加节点的路径信息
+                const path = getNodePath(selectedNode);
+                if (path.length > 0) {
+                    prompt += `节点路径: ${path.join(' > ')}\n`;
+                }
+                
+                // 添加子节点信息
+                if (selectedNode.children && selectedNode.children.length > 0) {
+                    prompt += `子节点: ${selectedNode.children.map(child => `"${child.topic}"`).join(', ')}\n`;
                 }
             }
             
-            prompt = `思维导图当前选中节点："${nodeTopic}"${childrenInfo}\n用户问题："${query}"\n\n`;
-            prompt += `请回答用户问题。如果需要修改思维导图，请用特定格式给出建议：\n`;
-            prompt += `- 添加子节点: "节点内容"\n- 修改当前节点: "新节点内容"\n- 添加兄弟节点: "节点内容"\n`;
-            prompt += `所有修改建议需要在回答后单独列出，便于用户选择是否应用。`;
-        }
-        
-        console.log('发送给AI的提示:', prompt);
-        
-        let response;
-        if (aiService === 'openai') {
-            response = await callOpenAI(apiKey, prompt, conversationHistory);
+            prompt += `\n我的问题是: ${query}\n`;
+            isFirstQuery = false;
         } else {
-            response = await callDeepseek(apiKey, prompt, conversationHistory);
-        }
-        
-        if (response) {
-            // 提取修改建议
-            const modifications = extractSuggestions(response);
+            // 后续对话，直接传递用户问题
+            prompt = query;
             
-            if (modifications.length > 0) {
-                // 有修改建议，分离建议和回答
-                const textWithoutSuggestions = removeSuggestionsFromText(response);
-                addMessage('ai', textWithoutSuggestions, modifications);
-            } else {
-                // 没有修改建议，直接显示回答
-                addMessage('ai', response);
+            // 如果是新选中了节点，额外添加当前节点的信息
+            if (selectedNode && selectedNode.topic) {
+                prompt = `当前我选中了节点"${selectedNode.topic}"。\n${query}`;
             }
         }
-    } catch (error) {
-        console.error('AI请求错误:', error);
-        addMessage('ai', `抱歉，处理您的请求时出错: ${error.message}`);
-    } finally {
-        document.getElementById('loading').style.display = 'none';
-    }
-}
-
-// 提取建议
-function extractSuggestions(text) {
-    console.log('从AI回复中提取建议...');
-    const suggestions = [];
-    
-    // 匹配更明确的修改建议格式
-    const suggestionPatterns = [
-        /(?:^|\n)-\s*添加子节点[:：]\s*[""](.+?)[""](?:\n|$)/g,
-        /(?:^|\n)-\s*修改当前节点[:：]\s*[""](.+?)[""](?:\n|$)/g,
-        /(?:^|\n)-\s*添加兄弟节点[:：]\s*[""](.+?)[""](?:\n|$)/g
-    ];
-    
-    const actionTypes = ['添加子节点', '修改当前节点', '添加兄弟节点'];
-    
-    // 遍历所有模式
-    suggestionPatterns.forEach((pattern, index) => {
-        let match;
-        while ((match = pattern.exec(text)) !== null) {
-            suggestions.push({
-                action: actionTypes[index],
-                topic: match[1].trim()
-            });
-        }
-    });
-    
-    console.log('提取到的建议:', suggestions);
-    return suggestions;
-}
-
-// 从文本中移除建议
-function removeSuggestionsFromText(text) {
-    return text.replace(/(?:^|\n)-\s*(?:添加子节点|修改当前节点|添加兄弟节点)[:：]\s*[""](.+?)[""](?:\n|$)/g, '\n');
-}
-
-// 调用OpenAI API
-async function callOpenAI(apiKey, prompt, history = []) {
-    console.log('调用OpenAI API，提供对话历史条数:', history.length);
-    
-    try {
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        };
         
-        // 构建消息数组，包含历史和当前提示
-        const messages = [
-            { role: 'system', content: '您是思维导图AI助手，可以帮助用户扩展思维导图、回答问题并给出修改建议。' },
-            ...history.slice(-MAX_CONTEXT_LENGTH * 2),
-            { role: 'user', content: prompt }
-        ];
+        console.log('发送到AI的提示:', prompt);
         
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
+        // 创建请求数据
+        let endpoint;
+        let headers = {'Content-Type': 'application/json'};
+        let messages = [];
+        
+        // 构建系统指令
+        const systemPrompt = `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
+
+在与用户的对话中，你可以：
+1. 回答用户关于任何主题的问题，提供信息和知识
+2. 参与正常的对话交流
+3. 根据用户请求对思维导图进行修改
+
+当用户请求修改思维导图时，请提供具体的修改建议，格式如下：
+[
+  {"action": "添加子节点", "topic": "节点内容"},
+  {"action": "修改当前节点", "topic": "新内容"},
+  {"action": "添加兄弟节点", "topic": "节点内容"},
+  {"action": "添加注释", "topic": "注释内容"}
+]
+
+如果用户没有请求修改思维导图，就正常回答用户问题，不需要提供上述JSON格式的修改建议。
+`;
+        
+        // 根据不同的AI服务调整请求格式
+        if (aiService === 'openai') {
+            endpoint = 'https://api.openai.com/v1/chat/completions';
+            
+            messages = [
+                { role: 'system', content: systemPrompt },
+                ...conversationHistory
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                apiKey: apiKey,
                 model: 'gpt-3.5-turbo',
                 messages: messages,
-                temperature: 0.7
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error.message || 'OpenAI API调用失败');
-        }
-        
-        const data = await response.json();
-        return data.choices[0].message.content;
-    } catch (error) {
-        console.error('OpenAI API调用错误:', error);
-        throw error;
-    }
-}
-
-// 调用Deepseek API
-async function callDeepseek(apiKey, prompt, history = []) {
-    console.log('调用Deepseek API，提供对话历史条数:', history.length);
-    
-    try {
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        };
-        
-        // 构建消息数组
-        const messages = [
-            { role: 'system', content: '您是思维导图AI助手，可以帮助用户扩展思维导图、回答问题并给出修改建议。' },
-            ...history.slice(-MAX_CONTEXT_LENGTH * 2),
-            { role: 'user', content: prompt }
-        ];
-        
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送OpenAI请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('API响应:', data);
+            
+            // 处理响应
+            let content = '';
+            let modifications = null;
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                content = data.choices[0].message.content;
+                
+                // 尝试解析修改建议
+                try {
+                    // 查找JSON格式的修改建议
+                    const jsonMatch = content.match(/\[\s*{.*}\s*\]/s);
+                    if (jsonMatch) {
+                        // 提取JSON字符串
+                        const jsonStr = jsonMatch[0];
+                        // 尝试解析
+                        modifications = JSON.parse(jsonStr);
+                        console.log('检测到修改建议:', modifications);
+                        
+                        // 从内容中移除JSON
+                        content = content.replace(jsonStr, '修改建议已解析（见下方按钮）');
+                    }
+                } catch (error) {
+                    console.warn('解析修改建议失败:', error);
+                }
+            }
+            
+            // 显示响应
+            addMessage('ai', content, modifications);
+            
+        } else if (aiService === 'azure') {
+            // 获取Azure设置
+            const resourceName = document.getElementById('resource_name').value;
+            const deploymentName = document.getElementById('deployment_name').value || 'gpt-35-turbo';
+            
+            if (!resourceName) {
+                throw new Error('使用Azure服务需要填写资源名称');
+            }
+            
+            endpoint = `https://${resourceName}.openai.azure.com/openai/deployments/${deploymentName}/chat/completions?api-version=2023-05-15`;
+            headers['api-key'] = apiKey;
+            
+            messages = [
+                { role: 'system', content: systemPrompt },
+                ...conversationHistory
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                headers: headers,
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送Azure请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('API响应:', data);
+            
+            // 处理响应
+            let content = '';
+            let modifications = null;
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                content = data.choices[0].message.content;
+                
+                // 尝试解析修改建议
+                try {
+                    // 查找JSON格式的修改建议
+                    const jsonMatch = content.match(/\[\s*{.*}\s*\]/s);
+                    if (jsonMatch) {
+                        // 提取JSON字符串
+                        const jsonStr = jsonMatch[0];
+                        // 尝试解析
+                        modifications = JSON.parse(jsonStr);
+                        console.log('检测到修改建议:', modifications);
+                        
+                        // 从内容中移除JSON
+                        content = content.replace(jsonStr, '修改建议已解析（见下方按钮）');
+                    }
+                } catch (error) {
+                    console.warn('解析修改建议失败:', error);
+                }
+            }
+            
+            // 显示响应
+            addMessage('ai', content, modifications);
+            
+        } else if (aiService === 'deepseek') {
+            endpoint = 'https://api.deepseek.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${apiKey}`;
+            
+            messages = [
+                { role: 'system', content: systemPrompt },
+                ...conversationHistory
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                headers: headers,
                 model: 'deepseek-chat',
                 messages: messages,
-                temperature: 0.7
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error.message || 'Deepseek API调用失败');
-        }
-        
-        const data = await response.json();
-        return data.choices[0].message.content;
-    } catch (error) {
-        console.error('Deepseek API调用错误:', error);
-        throw error;
-    }
-}
-
-// 获取子节点信息
-function getChildrenInfo(node) {
-    console.log('获取子节点信息...');
-    
-    if (!node) {
-        console.warn('节点为空');
-        return '';
-    }
-    
-    try {
-        // 获取子节点
-        const children = node.children || [];
-        
-        if (!children.length) {
-            return '此节点没有子节点';
-        }
-        
-        let childrenText = children
-            .filter(child => child && child.topic) // 确保子节点有效且有topic属性
-            .map(child => `• ${child.topic || '未命名节点'}`)
-            .join('\n');
+                temperature: 0.7,
+                max_tokens: 2000
+            };
             
-        return childrenText.trim() || '无法获取子节点信息';
+            console.log('发送Deepseek请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('API响应:', data);
+            
+            // 处理响应
+            let content = '';
+            let modifications = null;
+            
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                content = data.choices[0].message.content;
+                
+                // 尝试解析修改建议
+                try {
+                    // 查找JSON格式的修改建议
+                    const jsonMatch = content.match(/\[\s*{.*}\s*\]/s);
+                    if (jsonMatch) {
+                        // 提取JSON字符串
+                        const jsonStr = jsonMatch[0];
+                        // 尝试解析
+                        modifications = JSON.parse(jsonStr);
+                        console.log('检测到修改建议:', modifications);
+                        
+                        // 从内容中移除JSON
+                        content = content.replace(jsonStr, '修改建议已解析（见下方按钮）');
+                    }
+                } catch (error) {
+                    console.warn('解析修改建议失败:', error);
+                }
+            }
+            
+            // 显示响应
+            addMessage('ai', content, modifications);
+            
+        } else {
+            throw new Error('不支持的AI服务');
+        }
+        
     } catch (error) {
-        console.error('获取子节点信息失败:', error);
-        return '';
+        console.error('AI请求错误:', error);
+        addMessage('ai', `发生错误: ${error.message}`);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
@@ -472,4 +563,197 @@ function toggleAIAssistant() {
     addMessage('ai', aiAssistantEnabled ? 
         'AI助手已开启，将自动响应您选择的节点。' : 
         'AI助手已关闭，只会响应您的直接提问。');
+}
+
+// 发送思维导图修改请求
+async function requestMindmapModification() {
+    // 检查是否有选中的节点
+    if (!selectedNode) {
+        addMessage('ai', '请先选择一个节点，然后再请求修改思维导图。');
+        return;
+    }
+    
+    // 验证选中节点的有效性
+    if (!selectedNode.id || typeof selectedNode.id !== 'string') {
+        addMessage('ai', '选中的节点无效，请重新选择一个节点。');
+        console.error('选中节点无效:', selectedNode);
+        return;
+    }
+    
+    // 验证节点在jsMind中是否存在
+    const nodeInMind = jm.get_node(selectedNode.id);
+    if (!nodeInMind) {
+        addMessage('ai', '选中的节点在思维导图中不存在，请重新选择一个节点。');
+        console.error('节点不存在于jsMind中:', selectedNode.id);
+        return;
+    }
+    
+    // 检查API密钥是否存在
+    const apiKey = document.getElementById('api_key').value;
+    if (!apiKey) {
+        addMessage('ai', '请先点击设置，输入API密钥。');
+        document.getElementById('api_settings').classList.add('show');
+        return;
+    }
+    
+    // 获取当前对话的最后一条用户消息作为上下文
+    let latestUserQuery = "请帮我扩展当前选中的节点";
+    if (conversationHistory.length > 0) {
+        for (let i = conversationHistory.length - 1; i >= 0; i--) {
+            if (conversationHistory[i].role === 'user') {
+                latestUserQuery = conversationHistory[i].content;
+                break;
+            }
+        }
+    }
+    
+    // 构建特定的提示词，要求AI生成思维导图修改建议
+    const modificationPrompt = `请根据我的思维导图和当前选中的节点，提供具体的修改建议。
+我的上一个问题是: "${latestUserQuery}"
+
+当前思维导图结构: ${getMindmapStructure()}
+
+当前选中的节点是: "${selectedNode.topic}"
+
+请以JSON格式提供修改建议，格式如下:
+[
+  {"action": "添加子节点", "topic": "节点内容"},
+  {"action": "修改当前节点", "topic": "新内容"},
+  {"action": "添加兄弟节点", "topic": "节点内容"},
+  {"action": "添加注释", "topic": "注释内容"}
+]
+
+只回复上述JSON格式的修改建议，不要有其他文字说明。`;
+
+    // 在界面上显示加载状态
+    document.getElementById('loading').style.display = 'block';
+    
+    // 添加用户请求消息
+    addMessage('user', '请帮我修改当前选中的节点及其结构');
+    
+    try {
+        // 准备发送请求
+        const aiService = document.getElementById('ai_service').value;
+        let endpoint;
+        let headers = {'Content-Type': 'application/json'};
+        let messages = [];
+        
+        const systemPrompt = `你是一个专业的思维导图AI助手，专门帮助用户扩展和完善思维导图结构。
+你需要根据用户提供的当前思维导图结构和选中的节点，生成有针对性的修改建议。
+修改建议必须以严格的JSON格式返回，不要有任何其他文字说明。`;
+        
+        if (aiService === 'openai') {
+            endpoint = 'https://api.openai.com/v1/chat/completions';
+            
+            messages = [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: modificationPrompt }
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                apiKey: apiKey,
+                model: 'gpt-3.5-turbo',
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送OpenAI修改请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('修改请求响应:', data);
+            
+            // 处理响应
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const content = data.choices[0].message.content;
+                
+                // 尝试解析JSON格式的修改建议
+                try {
+                    // 提取JSON
+                    const trimmedContent = content.trim();
+                    const jsonStart = trimmedContent.indexOf('[');
+                    const jsonEnd = trimmedContent.lastIndexOf(']') + 1;
+                    
+                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                        const jsonStr = trimmedContent.substring(jsonStart, jsonEnd);
+                        const modifications = JSON.parse(jsonStr);
+                        
+                        console.log('成功解析修改建议:', modifications);
+                        
+                        // 显示AI回复和修改建议
+                        addMessage('ai', '以下是我的修改建议:', modifications);
+                    } else {
+                        throw new Error('返回内容中未找到有效的JSON格式');
+                    }
+                } catch (error) {
+                    console.error('解析修改建议失败:', error);
+                    addMessage('ai', `无法解析修改建议: ${content}`);
+                }
+            }
+        } else if (aiService === 'deepseek') {
+            endpoint = 'https://api.deepseek.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${apiKey}`;
+            
+            messages = [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: modificationPrompt }
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                headers: headers,
+                model: 'deepseek-chat',
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送Deepseek修改请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('修改请求响应:', data);
+            
+            // 处理响应
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const content = data.choices[0].message.content;
+                
+                // 尝试解析JSON格式的修改建议
+                try {
+                    // 提取JSON
+                    const trimmedContent = content.trim();
+                    const jsonStart = trimmedContent.indexOf('[');
+                    const jsonEnd = trimmedContent.lastIndexOf(']') + 1;
+                    
+                    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                        const jsonStr = trimmedContent.substring(jsonStart, jsonEnd);
+                        const modifications = JSON.parse(jsonStr);
+                        
+                        console.log('成功解析修改建议:', modifications);
+                        
+                        // 显示AI回复和修改建议
+                        addMessage('ai', '以下是我的修改建议:', modifications);
+                    } else {
+                        throw new Error('返回内容中未找到有效的JSON格式');
+                    }
+                } catch (error) {
+                    console.error('解析修改建议失败:', error);
+                    addMessage('ai', `无法解析修改建议: ${content}`);
+                }
+            }
+        } else if (aiService === 'azure') {
+            // Azure实现暂时保留原样
+            addMessage('ai', `暂不支持使用 ${aiService} 服务进行思维导图修改。请切换到OpenAI或Deepseek服务。`);
+        } else {
+            throw new Error('不支持的AI服务');
+        }
+    } catch (error) {
+        console.error('修改请求错误:', error);
+        addMessage('ai', `发生错误: ${error.message}`);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+// 生成唯一ID
+function generateUniqueID() {
+    return 'node_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
 }

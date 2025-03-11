@@ -9,6 +9,20 @@ let aiAssistantEnabled = false;  // AI助手启用状态
 let conversationHistory = [];  // 对话历史
 let isFirstQuery = true;  // 是否是首次查询
 
+ 
+// 捕获并处理资源加载错误
+window.addEventListener('error', function(e) {
+    // 检查错误是否来自Chrome扩展
+    if (e && e.target && e.target.src && e.target.src.indexOf('chrome-extension://') !== -1) {
+        // 阻止错误冒泡
+        e.stopPropagation();
+        // 阻止默认处理
+        e.preventDefault();
+        console.log('已屏蔽Chrome扩展相关错误:', e.target.src);
+        return true;
+    }
+}, true); // 使用捕获阶段
+
 // 页面初始化 - 使用window.onload确保所有资源都加载完成
 window.onload = function() {
     console.log('页面完全加载完成，开始初始化应用');

@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI思维导图编辑器</title>
+    <!-- 错误处理 - 抑制Chrome扩展错误 -->
+    <script>
+        // 捕获并处理资源加载错误
+        window.addEventListener('error', function(e) {
+            // 检查错误是否来自Chrome扩展
+            if (e && e.target && e.target.src && e.target.src.indexOf('chrome-extension://') !== -1) {
+                // 阻止错误冒泡
+                e.stopPropagation();
+                // 阻止默认处理
+                e.preventDefault();
+                console.log('已屏蔽Chrome扩展相关错误:', e.target.src);
+                return true;
+            }
+        }, true); // 使用捕获阶段
+    </script>
     <!-- 外部样式表 -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/mindmap.css">
@@ -12,8 +27,43 @@
     <link rel="stylesheet" href="https://unpkg.com/jsmind@0.8.6/style/jsmind.css" />
     <!-- KaTeX样式 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
-    <!-- OpenAI客户端库 -->
-    <script src="https://cdn.jsdelivr.net/npm/openai@4.24.1/dist/index.min.js"></script>
+    <!-- OpenAI客户端库 - 更新为可靠的CDN源 -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+    <script>
+        // 使用原生fetch或axios实现OpenAI API调用
+        window.openaiApi = {
+            // 创建简单包装器来调用OpenAI API
+            createCompletion: async function(options) {
+                const { apiKey, endpoint, headers = {}, ...data } = options;
+                const allHeaders = {
+                    'Content-Type': 'application/json',
+                    ...headers
+                };
+                
+                if (apiKey) {
+                    allHeaders['Authorization'] = `Bearer ${apiKey}`;
+                }
+                
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: allHeaders,
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.text();
+                        throw new Error(`API请求失败: ${response.status} ${errorData}`);
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('API请求错误:', error);
+                    throw error;
+                }
+            }
+        };
+    </script>
 </head>
 <body>
     <div class="header">
@@ -52,6 +102,7 @@
             <div class="chat-top-controls">
                 <button id="new_conversation" class="btn">新对话</button>
                 <button id="ai_toggle" class="btn">开启AI助手</button>
+                <button id="modify_mindmap" class="btn">修改思维导图</button>
                 <button id="settings_toggle" class="btn">⚙️ 设置</button>
             </div>
             
@@ -60,13 +111,20 @@
                 <div class="setting-group">
                     <label for="ai_service">AI服务:</label>
                     <select id="ai_service">
-                        <option value="openai">OpenAI</option>
                         <option value="deepseek">Deepseek</option>
+                        <option value="openai">OpenAI</option> 
+                <!--    <option value="azure">Azure OpenAI</option>  -->
                     </select>
                 </div>
                 <div class="setting-group">
                     <label for="api_key">API密钥:</label>
                     <input type="password" id="api_key" placeholder="输入API密钥" autocomplete="new-password">
+                </div>
+                <div class="setting-group azure-settings" style="display: none;">
+                    <label for="resource_name">资源名称:</label>
+                    <input type="text" id="resource_name" placeholder="Azure资源名称">
+                    <label for="deployment_name">部署名称:</label>
+                    <input type="text" id="deployment_name" placeholder="如：gpt-35-turbo">
                 </div>
             </div>
             
@@ -218,10 +276,18 @@
         </div>
     </div>
 
-    <!-- 脚本文件 -->
+    <!-- 脚本加载顺序 -->
+    <!-- 第一步：加载第三方库 -->
     <script src="https://unpkg.com/jsmind@0.8.6/es6/jsmind.js"></script>
     <script src="https://unpkg.com/jsmind@0.8.6/es6/jsmind.draggable-node.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+
+    <!-- 第二步：加载应用核心组件 -->
+    <script src="js/mindmap.js"></script>
+    <script src="js/latex-editor.js"></script>
+    <script src="js/ai-assistant.js"></script>
+    <!-- 第三步：加载启动核心 -->
+    <script src="js/core.js"></script>
     
     <!-- 触摸事件处理脚本 -->
     <script>
@@ -244,11 +310,5 @@
             };
         });
     </script>
-    
-    <!-- 应用JS文件，调整加载顺序 -->
-    <script src="js/mindmap.js"></script>
-    <script src="js/latex-editor.js"></script>
-    <script src="js/ai-assistant.js"></script>
-    <script src="js/core.js"></script>
 </body>
 </html>

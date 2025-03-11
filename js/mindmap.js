@@ -80,9 +80,9 @@ function initToolbar() {
     // 添加高级功能按钮
     toolbar.appendChild(createButton('latex_button', '公式', '插入LaTeX公式', openLatexEditor));
     toolbar.appendChild(createButton('note_button', '备注', '添加节点备注', openNoteEditor));
-    toolbar.appendChild(createButton('relation_button', '关联线', '创建节点间关联', startRelationLine));
+    // toolbar.appendChild(createButton('relation_button', '关联线', '创建节点间关联', startRelationLine));
     // toolbar.appendChild(createButton('summary_button', '摘要', '为节点添加摘要', openSummaryEditor));
-    
+    // 摘要和关联线功能暂时关掉 后面慢慢写
     // 添加分隔符
     toolbar.appendChild(createSeparator());
     

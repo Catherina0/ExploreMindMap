@@ -308,3 +308,12 @@
     height: 150px;
     padding: 8px;
 }
+
+#modify_mindmap {
+    background-color: #4a6bdf;
+    color: white;
+}
+
+#modify_mindmap:hover {
+    background-color: #3a59c5;
+}

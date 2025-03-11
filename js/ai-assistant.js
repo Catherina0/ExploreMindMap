@@ -235,6 +235,37 @@ function applyAISuggestions(modifications) {
         
         console.log('成功找到节点:', {id: nodeObj.id, topic: nodeObj.topic});
         
+        // 递归添加子节点的函数
+        const addChildrenNodes = (parentNodeId, children) => {
+            if (!children || !Array.isArray(children) || children.length === 0) return [];
+            
+            const addedNodes = [];
+            
+            children.forEach(child => {
+                const childNodeId = generateUniqueID();
+                console.log(`添加子节点: 父节点ID=${parentNodeId}, 新节点ID=${childNodeId}, 内容="${child.topic}"`);
+                
+                // 添加节点到思维导图
+                jm.add_node(parentNodeId, childNodeId, child.topic);
+                addedNodes.push(`"${child.topic}"`);
+                
+                // 递归添加孙节点
+                if (child.children && Array.isArray(child.children) && child.children.length > 0) {
+                    const grandChildren = addChildrenNodes(childNodeId, child.children);
+                    if (grandChildren.length > 0) {
+                        addedNodes.push(`包含子节点: ${grandChildren.join(', ')}`);
+                    }
+                }
+                
+                // 如果有注释，添加到节点
+                if (child.note && typeof addNodeNote === 'function') {
+                    addNodeNote(childNodeId, child.note);
+                }
+            });
+            
+            return addedNodes;
+        };
+        
         modifications.forEach(mod => {
             console.log(`处理修改: ${mod.action} - "${mod.topic}"`);
             
@@ -242,8 +273,20 @@ function applyAISuggestions(modifications) {
                 case '添加子节点':
                     const newNodeId = generateUniqueID();
                     console.log(`添加子节点: 父节点ID=${nodeObj.id}, 新节点ID=${newNodeId}, 内容="${mod.topic}"`);
+                    
+                    // 添加主节点
                     jm.add_node(nodeObj.id, newNodeId, mod.topic);
-                    modificationLog.push(`- 已添加子节点: "${mod.topic}"`);
+                    let logMessage = `- 已添加子节点: "${mod.topic}"`;
+                    
+                    // 如果有子节点，递归添加
+                    if (mod.children && Array.isArray(mod.children) && mod.children.length > 0) {
+                        const childrenAdded = addChildrenNodes(newNodeId, mod.children);
+                        if (childrenAdded.length > 0) {
+                            logMessage += `\n  并添加了子节点: ${childrenAdded.join(', ')}`;
+                        }
+                    }
+                    
+                    modificationLog.push(logMessage);
                     break;
                     
                 case '修改当前节点':
@@ -258,8 +301,20 @@ function applyAISuggestions(modifications) {
                         const parentId = nodeObj.parent.id;
                         const siblingId = generateUniqueID();
                         console.log(`添加兄弟节点: 父节点ID=${parentId}, 新节点ID=${siblingId}, 内容="${mod.topic}"`);
+                        
+                        // 添加主兄弟节点
                         jm.add_node(parentId, siblingId, mod.topic);
-                        modificationLog.push(`- 已添加兄弟节点: "${mod.topic}"`);
+                        let siblingLogMessage = `- 已添加兄弟节点: "${mod.topic}"`;
+                        
+                        // 如果有子节点，递归添加
+                        if (mod.children && Array.isArray(mod.children) && mod.children.length > 0) {
+                            const childrenAdded = addChildrenNodes(siblingId, mod.children);
+                            if (childrenAdded.length > 0) {
+                                siblingLogMessage += `\n  并添加了子节点: ${childrenAdded.join(', ')}`;
+                            }
+                        }
+                        
+                        modificationLog.push(siblingLogMessage);
                     } else {
                         console.warn('无法添加兄弟节点：当前节点没有父节点');
                         modificationLog.push(`- 无法添加兄弟节点"${mod.topic}"：当前为根节点`);
@@ -271,7 +326,7 @@ function applyAISuggestions(modifications) {
                     if (typeof addNodeNote === 'function') {
                         console.log(`添加注释: 节点ID=${nodeObj.id}, 内容="${mod.topic}"`);
                         addNodeNote(nodeObj.id, mod.topic);
-                        modificationLog.push(`- 已添加注释: "${mod.topic}"`);
+                        modificationLog.push(`- 已添加注释: "${mod.topic.substring(0, 50)}${mod.topic.length > 50 ? '...' : ''}"`);
                     } else {
                         console.warn('添加注释功能不可用');
                         modificationLog.push(`- 无法添加注释: 功能不可用`);
@@ -608,28 +663,35 @@ async function requestMindmapModification() {
     }
     
     // 构建特定的提示词，要求AI生成思维导图修改建议
-    const modificationPrompt = `请根据我的思维导图和当前选中的节点，提供具体的修改建议。
+    const modificationPrompt = `请根据我的思维导图和当前选中的节点，提供详细的多层次修改建议。
 我的上一个问题是: "${latestUserQuery}"
 
 当前思维导图结构: ${getMindmapStructure()}
 
 当前选中的节点是: "${selectedNode.topic}"
 
-请以JSON格式提供修改建议，格式如下:
+请以JSON格式提供修改建议，你可以创建多层次的节点结构，格式如下:
 [
   {"action": "添加子节点", "topic": "节点内容"},
+  {"action": "添加子节点", "topic": "父节点内容", "children": [
+    {"topic": "子节点1内容"},
+    {"topic": "子节点2内容", "children": [
+      {"topic": "孙节点内容"}
+    ]}
+  ]},
   {"action": "修改当前节点", "topic": "新内容"},
   {"action": "添加兄弟节点", "topic": "节点内容"},
-  {"action": "添加注释", "topic": "注释内容"}
+  {"action": "添加注释", "topic": "详细的注释内容，可以包含多行文本和重要信息"}
 ]
 
+请尽量提供丰富详细的内容，包括多级节点结构和详细的备注说明。
 只回复上述JSON格式的修改建议，不要有其他文字说明。`;
 
     // 在界面上显示加载状态
     document.getElementById('loading').style.display = 'block';
     
     // 添加用户请求消息
-    addMessage('user', '请帮我修改当前选中的节点及其结构');
+    addMessage('user', '请帮我详细扩展当前选中的节点及其结构');
     
     try {
         // 准备发送请求
@@ -640,6 +702,8 @@ async function requestMindmapModification() {
         
         const systemPrompt = `你是一个专业的思维导图AI助手，专门帮助用户扩展和完善思维导图结构。
 你需要根据用户提供的当前思维导图结构和选中的节点，生成有针对性的修改建议。
+你可以创建多层次的节点结构，包括子节点、孙节点等，让思维导图更加丰富和详细。
+同时，你也可以添加详细的备注信息，帮助用户更好地理解每个节点的内容。
 修改建议必须以严格的JSON格式返回，不要有任何其他文字说明。`;
         
         if (aiService === 'openai') {

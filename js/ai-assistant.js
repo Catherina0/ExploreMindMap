@@ -235,39 +235,51 @@ function applyAISuggestions(modifications) {
         
         console.log('成功找到节点:', {id: nodeObj.id, topic: nodeObj.topic});
         
-        // 递归添加子节点的函数
-        const addChildrenNodes = (parentNodeId, children) => {
+        // 递归添加子节点的函数，并生成详细的修改日志
+        const addChildrenNodes = (parentNodeId, children, indent = 2) => {
             if (!children || !Array.isArray(children) || children.length === 0) return [];
             
-            const addedNodes = [];
+            const addedNodesLog = [];
             
-            children.forEach(child => {
+            children.forEach((child, index) => {
                 const childNodeId = generateUniqueID();
                 console.log(`添加子节点: 父节点ID=${parentNodeId}, 新节点ID=${childNodeId}, 内容="${child.topic}"`);
                 
                 // 添加节点到思维导图
                 jm.add_node(parentNodeId, childNodeId, child.topic);
-                addedNodes.push(`"${child.topic}"`);
+                
+                // 创建缩进
+                const indentSpaces = ' '.repeat(indent);
+                let childLog = `${indentSpaces}${index + 1}. "${child.topic}"`;
+                
+                // 如果有注释，添加到节点和日志
+                if (child.note && typeof addNodeNote === 'function') {
+                    addNodeNote(childNodeId, child.note);
+                    const notePreview = child.note.length > 50 ? 
+                        child.note.substring(0, 50) + '...' : 
+                        child.note;
+                    childLog += `\n${indentSpaces}   备注: "${notePreview}"`;
+                }
                 
                 // 递归添加孙节点
                 if (child.children && Array.isArray(child.children) && child.children.length > 0) {
-                    const grandChildren = addChildrenNodes(childNodeId, child.children);
-                    if (grandChildren.length > 0) {
-                        addedNodes.push(`包含子节点: ${grandChildren.join(', ')}`);
+                    const grandChildrenLogs = addChildrenNodes(childNodeId, child.children, indent + 2);
+                    if (grandChildrenLogs.length > 0) {
+                        childLog += `\n${indentSpaces}   子节点:`;
+                        grandChildrenLogs.forEach(log => {
+                            childLog += `\n${log}`;
+                        });
                     }
                 }
                 
-                // 如果有注释，添加到节点
-                if (child.note && typeof addNodeNote === 'function') {
-                    addNodeNote(childNodeId, child.note);
-                }
+                addedNodesLog.push(childLog);
             });
             
-            return addedNodes;
+            return addedNodesLog;
         };
         
-        modifications.forEach(mod => {
-            console.log(`处理修改: ${mod.action} - "${mod.topic}"`);
+        modifications.forEach((mod, index) => {
+            console.log(`处理修改 #${index + 1}: ${mod.action} - "${mod.topic}"`);
             
             switch (mod.action) {
                 case '添加子节点':
@@ -276,14 +288,26 @@ function applyAISuggestions(modifications) {
                     
                     // 添加主节点
                     jm.add_node(nodeObj.id, newNodeId, mod.topic);
-                    let logMessage = `- 已添加子节点: "${mod.topic}"`;
+                    let logMessage = `- 修改 #${index + 1}: 添加子节点 "${mod.topic}"`;
                     
-                    // 如果有子节点，递归添加
+                    // 如果有子节点，递归添加并记录详细信息
                     if (mod.children && Array.isArray(mod.children) && mod.children.length > 0) {
-                        const childrenAdded = addChildrenNodes(newNodeId, mod.children);
-                        if (childrenAdded.length > 0) {
-                            logMessage += `\n  并添加了子节点: ${childrenAdded.join(', ')}`;
+                        const childrenLogs = addChildrenNodes(newNodeId, mod.children);
+                        if (childrenLogs.length > 0) {
+                            logMessage += `\n  子节点:`;
+                            childrenLogs.forEach(log => {
+                                logMessage += `\n${log}`;
+                            });
                         }
+                    }
+                    
+                    // 如果有注释，添加到节点和日志
+                    if (mod.note && typeof addNodeNote === 'function') {
+                        addNodeNote(newNodeId, mod.note);
+                        const notePreview = mod.note.length > 50 ? 
+                            mod.note.substring(0, 50) + '...' : 
+                            mod.note;
+                        logMessage += `\n  备注: "${notePreview}"`;
                     }
                     
                     modificationLog.push(logMessage);
@@ -293,7 +317,7 @@ function applyAISuggestions(modifications) {
                     const oldTopic = nodeObj.topic;
                     console.log(`修改节点: ID=${nodeObj.id}, 旧内容="${oldTopic}", 新内容="${mod.topic}"`);
                     jm.update_node(nodeObj.id, mod.topic);
-                    modificationLog.push(`- 已将节点"${oldTopic}"修改为"${mod.topic}"`);
+                    modificationLog.push(`- 修改 #${index + 1}: 将节点"${oldTopic}"修改为"${mod.topic}"`);
                     break;
                     
                 case '添加兄弟节点':
@@ -304,20 +328,32 @@ function applyAISuggestions(modifications) {
                         
                         // 添加主兄弟节点
                         jm.add_node(parentId, siblingId, mod.topic);
-                        let siblingLogMessage = `- 已添加兄弟节点: "${mod.topic}"`;
+                        let siblingLogMessage = `- 修改 #${index + 1}: 添加兄弟节点 "${mod.topic}"`;
                         
-                        // 如果有子节点，递归添加
+                        // 如果有子节点，递归添加并记录详细信息
                         if (mod.children && Array.isArray(mod.children) && mod.children.length > 0) {
-                            const childrenAdded = addChildrenNodes(siblingId, mod.children);
-                            if (childrenAdded.length > 0) {
-                                siblingLogMessage += `\n  并添加了子节点: ${childrenAdded.join(', ')}`;
+                            const childrenLogs = addChildrenNodes(siblingId, mod.children);
+                            if (childrenLogs.length > 0) {
+                                siblingLogMessage += `\n  子节点:`;
+                                childrenLogs.forEach(log => {
+                                    siblingLogMessage += `\n${log}`;
+                                });
                             }
+                        }
+                        
+                        // 如果有注释，添加到节点和日志
+                        if (mod.note && typeof addNodeNote === 'function') {
+                            addNodeNote(siblingId, mod.note);
+                            const notePreview = mod.note.length > 50 ? 
+                                mod.note.substring(0, 50) + '...' : 
+                                mod.note;
+                            siblingLogMessage += `\n  备注: "${notePreview}"`;
                         }
                         
                         modificationLog.push(siblingLogMessage);
                     } else {
                         console.warn('无法添加兄弟节点：当前节点没有父节点');
-                        modificationLog.push(`- 无法添加兄弟节点"${mod.topic}"：当前为根节点`);
+                        modificationLog.push(`- 修改 #${index + 1}: 无法添加兄弟节点"${mod.topic}"，当前为根节点`);
                     }
                     break;
                 
@@ -326,16 +362,19 @@ function applyAISuggestions(modifications) {
                     if (typeof addNodeNote === 'function') {
                         console.log(`添加注释: 节点ID=${nodeObj.id}, 内容="${mod.topic}"`);
                         addNodeNote(nodeObj.id, mod.topic);
-                        modificationLog.push(`- 已添加注释: "${mod.topic.substring(0, 50)}${mod.topic.length > 50 ? '...' : ''}"`);
+                        const notePreview = mod.topic.length > 50 ? 
+                            mod.topic.substring(0, 50) + '...' : 
+                            mod.topic;
+                        modificationLog.push(`- 修改 #${index + 1}: 添加注释 "${notePreview}"`);
                     } else {
                         console.warn('添加注释功能不可用');
-                        modificationLog.push(`- 无法添加注释: 功能不可用`);
+                        modificationLog.push(`- 修改 #${index + 1}: 无法添加注释，功能不可用`);
                     }
                     break;
                     
                 default:
                     console.warn('未知的修改操作:', mod.action);
-                    modificationLog.push(`- 未知操作(${mod.action}): "${mod.topic}"`);
+                    modificationLog.push(`- 修改 #${index + 1}: 未知操作(${mod.action}) "${mod.topic}"`);
             }
         });
         

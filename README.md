@@ -31,25 +31,17 @@
 
 ## jsMind 功能说明
 
-本项目基于 [jsMind](https://hizzgdev.github.io/jsmind/docs/zh/) 实现，使用了以下核心功能：
+本项目基于 [jsMind](https://hizzgdev.github.io/jsmind/docs/zh/) [KaTeX] 等库实现，使用了以下核心功能：
 
 - 多主题支持：primary、warning、danger、success、info、greensea
 - 节点管理：添加、删除、移动节点
 - 数据导入导出：保存和加载思维导图
 - 展开/折叠操作：方便查看大型思维导图
-
-## 注意事项
-
-- 当前实现直接在前端调用AI API，这在生产环境中可能不安全，应考虑通过后端服务器来中转API调用
-- 请确保您的API密钥具有足够的调用额度
-- 对于较大的思维导图，可能需要调整容器大小
+- latex公式渲染
+- 通过与AI对话完成思维导图的创建和修改
 
 ## 后续改进方向
 
 - 添加保存功能，将思维导图导出为图片
 - 优化移动设备的兼容性
 - 实现后端服务器以保护API密钥
-
-## 许可证
-
-MIT 

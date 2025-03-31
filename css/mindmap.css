@@ -5,6 +5,7 @@
     flex: 1;
     height: 100%;
     overflow: hidden;
+    width: calc(100% - 400px);
 }
 
 #jsmind_container {
@@ -345,4 +346,8 @@ jmexpander:hover {
     .note-tooltip {
         background-color: #1f2937;
     }
+}
+
+.chat-hidden .mindmap-container {
+    width: 100%;
 }

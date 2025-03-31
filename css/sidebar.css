@@ -1,7 +1,5 @@
 /* 聊天容器样式 */
 .chat-container {
-    width: 400px;
-    border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     background-color: var(--sidebar-bg);

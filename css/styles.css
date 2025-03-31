@@ -120,12 +120,13 @@ body {
 }
 
 /* 主容器 */
-.main-container {
+.app-container {
     display: flex;
     flex: 1;
     overflow: hidden;
     background-color: var(--bg-color);
     position: relative;
+    height: calc(100vh - 60px); /* 减去顶部导航高度 */
 }
 
 /* 思维导图容器 */
@@ -135,28 +136,25 @@ body {
     overflow: hidden;
     background-color: var(--bg-color);
     transition: width var(--transition-normal);
-    width: calc(100% - 400px);
     display: flex;
     flex-direction: column;
 }
 
-.chat-hidden .mindmap-container {
-    width: 100%;
-}
-
 /* 聊天侧边栏显示/隐藏状态 */
 .chat-container {
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
     width: 400px;
+    min-width: 400px;
+    height: 100%;
     transition: transform var(--transition-normal);
     z-index: 5;
+    border-left: 1px solid var(--border-color);
 }
 
 .chat-hidden .chat-container {
     transform: translateX(100%);
+    position: absolute;
+    right: 0;
+    top: 0;
 }
 
 /* 工具栏样式 */
@@ -174,14 +172,6 @@ body {
     z-index: 4;
     transition: width var(--transition-normal);
     position: relative;
-}
-
-.chat-hidden .toolbar {
-    width: 100%;
-}
-
-:not(.chat-hidden) .toolbar {
-    width: calc(100% - 400px);
 }
 
 .toolbar-group {
@@ -202,7 +192,7 @@ body {
 .zoom-controller {
     position: absolute;
     bottom: 20px;
-    right: 420px;
+    right: 20px;
     display: flex;
     align-items: center;
     background-color: var(--bg-color);

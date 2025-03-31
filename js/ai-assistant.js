@@ -76,14 +76,14 @@ function initChat() {
     
     // 绑定toggle_chat按钮 - 显示/隐藏AI助手
     document.getElementById('toggle_chat').addEventListener('click', function() {
-        const mainContainer = document.querySelector('.main-container');
-        mainContainer.classList.toggle('chat-hidden');
+        const appContainer = document.querySelector('.app-container');
+        appContainer.classList.toggle('chat-hidden');
         
         // 更新按钮文本
         const buttonIcon = this.querySelector('i');
         const buttonText = this.querySelector('span');
         
-        if (mainContainer.classList.contains('chat-hidden')) {
+        if (appContainer.classList.contains('chat-hidden')) {
             buttonText.textContent = '显示助手';
             if (buttonIcon) buttonIcon.className = 'fas fa-eye';
         } else {
@@ -100,7 +100,6 @@ function initChat() {
                 try {
                     // 获取容器和工具栏
                     const container = document.getElementById('jsmind_container');
-                    const toolbar = document.querySelector('.toolbar');
                     const zoomController = document.querySelector('.zoom-controller');
                     
                     if (!container) {
@@ -108,60 +107,54 @@ function initChat() {
                         return;
                     }
                     
-                    console.log('AI助手状态:', mainContainer.classList.contains('chat-hidden') ? '隐藏' : '显示');
+                    const isVisible = !appContainer.classList.contains('chat-hidden');
+                    console.log('AI助手状态:', isVisible ? '显示' : '隐藏');
                     
-                    // 重新计算工具栏宽度
-                    if (toolbar) {
-                        console.log('重新计算工具栏宽度');
-                        if (mainContainer.classList.contains('chat-hidden')) {
-                            toolbar.style.width = '100%';
-                        } else {
-                            toolbar.style.width = 'calc(100% - 400px)';
+                    // 调整思维导图容器宽度（新的平行布局结构不需要调整宽度）
+                    
+                    // 等待DOM更新完成后再计算画布尺寸
+                    setTimeout(() => {
+                        // 强制重新计算画布尺寸
+                        const w = container.clientWidth;
+                        const h = container.clientHeight;
+                        console.log(`画布新尺寸(更新后): ${w}x${h}`);
+                        
+                        // 调整大小
+                        jm.resize();
+                        
+                        // 应用新尺寸
+                        if (jm.view && typeof jm.view.size === 'function') {
+                            jm.view.size(w, h);
+                            console.log('已应用新尺寸到画布');
                         }
-                    }
-                    
-                    // 重新定位缩放控制器
-                    if (zoomController) {
-                        console.log('重新定位缩放控制器');
-                        if (mainContainer.classList.contains('chat-hidden')) {
-                            zoomController.style.right = '20px';
-                        } else {
-                            zoomController.style.right = '420px';
+                        
+                        // 确保根节点始终居中显示，无论是否有选中节点
+                        console.log('重新居中根节点');
+                        if (jm.mind && jm.mind.root) {
+                            // 首先确保根节点在视图中居中
+                            jm.view.center_node(jm.mind.root);
+                            console.log('根节点已居中');
                         }
-                    }
+                        
+                        // 如果有选中节点，再居中到选中节点
+                        if (selectedNode && typeof jm.view.center_node === 'function') {
+                            jm.view.center_node(jm.get_node(selectedNode.id));
+                            console.log('选中节点已居中');
+                        }
+                        
+                        // 确保画布重新渲染以适应新宽度
+                        if (jm.view && typeof jm.view.expand_size === 'function') {
+                            jm.view.expand_size();
+                            console.log('扩展画布大小以适应新宽度');
+                        }
+                        
+                        // 刷新视图
+                        if (jm.view && typeof jm.view.show === 'function') {
+                            jm.view.show();
+                            console.log('刷新思维导图视图');
+                        }
+                    }, 50); // 短暂延时等待DOM更新
                     
-                    // 强制重新计算画布尺寸
-                    const w = container.clientWidth;
-                    const h = container.clientHeight;
-                    console.log(`画布新尺寸: ${w}x${h}`);
-                    
-                    // 调整大小
-                    jm.resize();
-                    
-                    // 应用新尺寸
-                    if (jm.view && typeof jm.view.size === 'function') {
-                        jm.view.size(w, h);
-                        console.log('已应用新尺寸到画布');
-                    }
-                    
-                    // 确保视图居中
-                    if (selectedNode && typeof jm.view.center_node === 'function') {
-                        jm.view.center_node(jm.get_node(selectedNode.id) || jm.mind.root);
-                    } else if (jm.mind && jm.mind.root) {
-                        jm.view.center_node(jm.mind.root);
-                    }
-                    
-                    // 确保画布重新渲染以适应新宽度
-                    if (jm.view && typeof jm.view.expand_size === 'function') {
-                        jm.view.expand_size();
-                        console.log('扩展画布大小以适应新宽度');
-                    }
-                    
-                    // 刷新视图
-                    if (jm.view && typeof jm.view.show === 'function') {
-                        jm.view.show();
-                        console.log('刷新思维导图视图');
-                    }
                 } catch (error) {
                     console.error('调整画布大小失败:', error);
                 }
@@ -170,8 +163,8 @@ function initChat() {
     });
     
     // 默认隐藏AI助手侧边栏
-    const mainContainer = document.querySelector('.main-container');
-    mainContainer.classList.add('chat-hidden');
+    const appContainer = document.querySelector('.app-container');
+    appContainer.classList.add('chat-hidden');
     
     // 更新按钮状态
     const toggleButton = document.getElementById('toggle_chat');
@@ -182,13 +175,7 @@ function initChat() {
     if (buttonIcon) buttonIcon.className = 'fas fa-eye';
     
     // 调整UI元素初始状态
-    const toolbar = document.querySelector('.toolbar');
     const zoomController = document.querySelector('.zoom-controller');
-    
-    if (toolbar) {
-        console.log('设置工具栏初始宽度');
-        toolbar.style.width = '100%';
-    }
     
     if (zoomController) {
         console.log('设置缩放控制器初始位置');
@@ -202,9 +189,8 @@ function initChat() {
             
             // 强制重新计算画布尺寸
             try {
-                // 获取容器和工具栏
+                // 获取容器
                 const container = document.getElementById('jsmind_container');
-                const toolbar = document.querySelector('.toolbar');
                 const zoomController = document.querySelector('.zoom-controller');
                 
                 if (!container) {
@@ -214,48 +200,47 @@ function initChat() {
                 
                 console.log('初始化AI助手状态: 隐藏');
                 
-                // 重新计算工具栏宽度
-                if (toolbar) {
-                    console.log('设置工具栏初始宽度');
-                    toolbar.style.width = '100%';
-                }
-                
-                // 重新定位缩放控制器
+                // 设置缩放控制器初始位置
                 if (zoomController) {
                     console.log('设置缩放控制器初始位置');
                     zoomController.style.right = '20px';
                 }
                 
-                // 强制重新计算画布尺寸
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                console.log(`初始画布尺寸: ${w}x${h}`);
+                // 等待DOM更新完成后再计算画布尺寸
+                setTimeout(() => {
+                    // 强制重新计算画布尺寸
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+                    console.log(`初始画布尺寸(更新后): ${w}x${h}`);
+                    
+                    // 调整大小
+                    jm.resize();
+                    
+                    // 应用新尺寸
+                    if (jm.view && typeof jm.view.size === 'function') {
+                        jm.view.size(w, h);
+                        console.log('已应用初始尺寸到画布');
+                    }
+                    
+                    // 确保视图居中
+                    if (jm.mind && jm.mind.root) {
+                        jm.view.center_node(jm.mind.root);
+                        console.log('初始化时根节点已居中');
+                    }
+                    
+                    // 确保画布重新渲染以适应新宽度
+                    if (jm.view && typeof jm.view.expand_size === 'function') {
+                        jm.view.expand_size();
+                        console.log('初始化时扩展画布大小');
+                    }
+                    
+                    // 刷新视图
+                    if (jm.view && typeof jm.view.show === 'function') {
+                        jm.view.show();
+                        console.log('初始化时刷新思维导图视图');
+                    }
+                }, 50); // 短暂延时等待DOM更新
                 
-                // 调整大小
-                jm.resize();
-                
-                // 应用新尺寸
-                if (jm.view && typeof jm.view.size === 'function') {
-                    jm.view.size(w, h);
-                    console.log('已应用初始尺寸到画布');
-                }
-                
-                // 确保视图居中
-                if (jm.mind && jm.mind.root) {
-                    jm.view.center_node(jm.mind.root);
-                }
-                
-                // 确保画布重新渲染以适应新宽度
-                if (jm.view && typeof jm.view.expand_size === 'function') {
-                    jm.view.expand_size();
-                    console.log('初始化时扩展画布大小');
-                }
-                
-                // 刷新视图
-                if (jm.view && typeof jm.view.show === 'function') {
-                    jm.view.show();
-                    console.log('初始化时刷新思维导图视图');
-                }
             } catch (error) {
                 console.error('初始化时调整画布大小失败:', error);
             }

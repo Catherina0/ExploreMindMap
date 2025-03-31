@@ -228,3 +228,78 @@
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* 备注提示框样式 */
+.note-tooltip {
+    position: absolute;
+    z-index: 1000;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px 14px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    max-width: 350px;
+    max-height: 250px;
+    overflow: auto;
+    display: none;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    cursor: default;
+    pointer-events: auto;
+    user-select: text;
+}
+
+/* 提示框滚动条样式 */
+.note-tooltip::-webkit-scrollbar {
+    width: 8px;
+}
+
+.note-tooltip::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.note-tooltip::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.note-tooltip::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 确保节点样式增加 */
+jmnode {
+    position: relative;
+}
+
+/* 备注指示器样式 */
+.note-indicator {
+    margin-left: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.note-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(1.1);
+}
+
+/* 适应不同主题的文本颜色 - 统一为黑色 */
+.theme-primary .note-indicator svg,
+.theme-danger .note-indicator svg,
+.theme-success .note-indicator svg,
+.theme-warning .note-indicator svg {
+    fill: #333 !important;
+}

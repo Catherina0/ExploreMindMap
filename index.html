@@ -35,19 +35,44 @@
             // 创建简单包装器来调用OpenAI API
             createCompletion: async function(options) {
                 const { apiKey, endpoint, headers = {}, ...data } = options;
-                const allHeaders = {
-                    'Content-Type': 'application/json',
-                    ...headers
-                };
                 
+                // 创建一个新的headers对象，去除可能包含的非ASCII字符
+                const cleanHeaders = {};
+                cleanHeaders['Content-Type'] = 'application/json';
+                
+                // 对已有headers进行清理
+                for (const key in headers) {
+                    if (Object.prototype.hasOwnProperty.call(headers, key)) {
+                        try {
+                            // 尝试用ASCII编码，如果失败则跳过
+                            const cleanKey = key.replace(/[^\x00-\x7F]/g, '');
+                            const cleanValue = String(headers[key]).replace(/[^\x00-\x7F]/g, '');
+                            if (cleanKey && cleanValue) {
+                                cleanHeaders[cleanKey] = cleanValue;
+                            }
+                        } catch (e) {
+                            console.warn('清理headers时出错，忽略该键值对:', key);
+                        }
+                    }
+                }
+                
+                // 安全添加Authorization头
                 if (apiKey) {
-                    allHeaders['Authorization'] = `Bearer ${apiKey}`;
+                    try {
+                        // 确保apiKey只包含有效字符
+                        const cleanApiKey = String(apiKey).replace(/[^\x20-\x7E]/g, '');
+                        cleanHeaders['Authorization'] = `Bearer ${cleanApiKey}`;
+                    } catch (e) {
+                        console.error('处理API密钥时出错:', e);
+                        throw new Error('API密钥包含无效字符');
+                    }
                 }
                 
                 try {
+                    console.log('请求头:', cleanHeaders);
                     const response = await fetch(endpoint, {
                         method: 'POST',
-                        headers: allHeaders,
+                        headers: cleanHeaders,
                         body: JSON.stringify(data)
                     });
                     

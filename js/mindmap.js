@@ -239,97 +239,264 @@ function initZoomController() {
 
 function addNoteMarker(node) {
     try {
-        // 只有当节点有备注时才添加标记
-        if (!node || !node.data || !node.data.note) return;
+        console.log('开始为节点添加备注标记:', node.id, node.topic);
         
-        // 获取节点DOM元素
-        const nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
-        if (!nodeElement) return;
+        // 只有当节点有备注时才添加标记
+        if (!node || !node.data || !node.data.note) {
+            console.log('节点没有备注，跳过添加标记');
+            return;
+        }
+        
+        // 获取节点DOM元素 - 改进选择器以提高兼容性
+        let nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
+        
+        // 如果找不到，尝试使用备用查找方法
+        if (!nodeElement) {
+            // 尝试查找包含id属性的元素
+            nodeElement = document.querySelector(`[nodeid="${node.id}"]`);
+            
+            // 如果还是找不到，尝试通过jm查找
+            if (!nodeElement && jm && jm.view) {
+                console.log('使用备用方法查找节点DOM元素');
+                const nodeElem = jm.view.get_node_element(node.id);
+                if (nodeElem) {
+                    nodeElement = nodeElem;
+                }
+            }
+        }
+        
+        if (!nodeElement) {
+            console.warn('找不到节点的DOM元素:', node.id);
+            return;
+        }
+        
+        console.log('成功找到节点DOM元素:', node.id);
         
         // 检查是否已有标记
-        if (nodeElement.querySelector('.note-indicator')) return;
+        if (nodeElement.querySelector('.note-indicator')) {
+            console.log('节点已有备注标记，跳过');
+            return;
+        }
         
         // 获取节点内容元素
-        const topicElement = nodeElement.querySelector('.topic');
-        if (!topicElement) return;
+        let topicElement = nodeElement.querySelector('.topic');
         
-        // 创建备注指示器按钮（使用SVG）
+        // 如果找不到.topic，尝试查找其他可能的内容元素
+        if (!topicElement) {
+            topicElement = nodeElement.firstElementChild || nodeElement;
+            console.log('使用备用元素作为topic容器');
+        }
+        
+        if (!topicElement) {
+            console.warn('找不到节点内容元素');
+            return;
+        }
+        
+        console.log('成功找到topic元素');
+        
+        // 创建备注指示器按钮
         const noteIndicator = document.createElement('span');
         noteIndicator.className = 'note-indicator';
-        noteIndicator.style.marginLeft = '4px';
-        noteIndicator.style.cursor = 'pointer';
-        noteIndicator.style.display = 'inline-block';
-        noteIndicator.style.verticalAlign = 'middle';
-        noteIndicator.style.width = '16px';
-        noteIndicator.style.height = '16px';
+        noteIndicator.setAttribute('title', '查看备注');
         
-        // 创建SVG图标
-        const svgNS = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("width", "16");
-        svg.setAttribute("height", "16");
-        svg.setAttribute("viewBox", "0 0 24 24");
-        svg.style.fill = "#4285f4";
+        // 设置样式
+        Object.assign(noteIndicator.style, {
+            marginLeft: '4px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            verticalAlign: 'middle',
+            width: '18px',
+            height: '18px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            transition: 'all 0.2s ease',
+            position: 'relative'
+        });
         
-        // 创建备注图标路径
-        const path = document.createElementNS(svgNS, "path");
-        path.setAttribute("d", "M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-2-7H7v-2h10v2zm-4 4H7v-2h6v2z");
+        // 添加HTML图标作为备用
+        noteIndicator.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="fill:#333;">
+                <path d="M21 6v14c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h1V2h2v2h8V2h2v2h1c1.1 0 2 .9 2 2zM5 8h14V6H5v2zm14 12V10H5v10h14z"></path>
+            </svg>
+        `;
         
-        svg.appendChild(path);
-        noteIndicator.appendChild(svg);
+        // 鼠标悬停效果
+        noteIndicator.addEventListener('mouseover', function() {
+            this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+            this.style.transform = 'scale(1.1)';
+        });
+        
+        noteIndicator.addEventListener('mouseout', function() {
+            this.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            this.style.transform = 'scale(1)';
+        });
         
         // 创建悬浮提示框
         const tooltip = document.createElement('div');
         tooltip.className = 'note-tooltip';
-        tooltip.textContent = node.data.note;
+        
+        // 添加标题行
+        const titleRow = document.createElement('div');
+        titleRow.style.borderBottom = '1px solid #eaeaea';
+        titleRow.style.padding = '0 0 6px 0';
+        titleRow.style.marginBottom = '8px';
+        titleRow.style.fontWeight = 'bold';
+        titleRow.style.color = '#333';
+        titleRow.textContent = node.topic || '节点备注';
+        tooltip.appendChild(titleRow);
+        
+        // 添加备注内容
+        const contentDiv = document.createElement('div');
+        contentDiv.textContent = node.data.note;
+        tooltip.appendChild(contentDiv);
+        
         tooltip.dataset.nodeId = node.id;
-        tooltip.style.position = 'absolute';
-        tooltip.style.zIndex = '1000';
-        tooltip.style.backgroundColor = '#fff';
-        tooltip.style.border = '1px solid #ddd';
-        tooltip.style.borderRadius = '4px';
-        tooltip.style.padding = '8px 12px';
-        tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-        tooltip.style.maxWidth = '250px';
-        tooltip.style.maxHeight = '150px';
-        tooltip.style.overflow = 'auto';
-        tooltip.style.display = 'none';
-        tooltip.style.whiteSpace = 'pre-wrap';
-        tooltip.style.fontSize = '14px';
-        tooltip.style.lineHeight = '1.4';
         
-        // 鼠标悬停时显示提示框
-        noteIndicator.addEventListener('mouseover', function(e) {
+        // 设置tooltip样式
+        Object.assign(tooltip.style, {
+            position: 'absolute',
+            zIndex: '1000',
+            backgroundColor: '#fff',
+            border: '1px solid #ddd',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            boxShadow: '0 3px 12px rgba(0,0,0,0.15)',
+            maxWidth: '350px',
+            maxHeight: '250px',
+            overflow: 'auto',
+            display: 'none',
+            whiteSpace: 'pre-wrap',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: '#333',
+            cursor: 'default',
+            pointerEvents: 'auto',
+            userSelect: 'text'
+        });
+
+        // 用于跟踪鼠标位置的变量
+        let isTooltipHovered = false;
+        let isIndicatorHovered = false;
+        let isNodeHovered = false;
+        
+        // 显示提示框函数
+        function showTooltip() {
             // 获取节点位置
-            const nodeRect = nodeElement.getBoundingClientRect();
-            const indicatorRect = noteIndicator.getBoundingClientRect();
+            const rect = nodeElement.getBoundingClientRect();
             
-            // 定位在节点下方
-            tooltip.style.top = (nodeRect.bottom + 5) + 'px';
-            tooltip.style.left = (indicatorRect.left) + 'px';
+            // 设置提示框位置 - 在节点右侧
+            const topPosition = rect.top + window.scrollY;
+            const leftPosition = rect.right + window.scrollX + 10; // 10px的间距
+            
+            // 应用位置
+            tooltip.style.top = `${topPosition}px`;
+            tooltip.style.left = `${leftPosition}px`;
+            
+            // 显示提示框
             tooltip.style.display = 'block';
+            tooltip.style.opacity = '0';
+            tooltip.style.transform = 'translateY(-5px)';
             
-            // 检查是否超出视口边界并调整位置
+            // 稍微延迟后添加过渡效果
             setTimeout(() => {
-                const tooltipRect = tooltip.getBoundingClientRect();
-                const viewportWidth = window.innerWidth;
-                
-                if (tooltipRect.right > viewportWidth) {
-                    tooltip.style.left = (viewportWidth - tooltipRect.width - 10) + 'px';
-                }
-            }, 0);
+                tooltip.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                tooltip.style.opacity = '1';
+                tooltip.style.transform = 'translateY(0)';
+            }, 10);
+        }
+        
+        // 鼠标悬停时显示提示框 - 备注图标
+        noteIndicator.addEventListener('mouseover', function(e) {
+            isIndicatorHovered = true;
+            showTooltip();
         });
         
-        // 鼠标移出时隐藏提示框
-        noteIndicator.addEventListener('mouseout', function() {
-            tooltip.style.display = 'none';
+        // 鼠标移出图标
+        noteIndicator.addEventListener('mouseout', function(e) {
+            isIndicatorHovered = false;
+            // 延迟隐藏，给用户时间将鼠标移动到提示框上
+            setTimeout(() => {
+                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
+                    hideTooltip();
+                }
+            }, 50);
         });
+        
+        // 鼠标悬停时显示提示框 - 整个节点
+        nodeElement.addEventListener('mouseover', function(e) {
+            // 如果鼠标悬停在备注图标上，不做处理（避免重复）
+            if (e.target === noteIndicator || noteIndicator.contains(e.target)) {
+                return;
+            }
+            isNodeHovered = true;
+            showTooltip();
+        });
+        
+        // 鼠标移出节点
+        nodeElement.addEventListener('mouseout', function(e) {
+            // 确保鼠标真的离开了节点，而不是移到节点的子元素上
+            // relatedTarget 是鼠标移到的目标元素
+            if (this.contains(e.relatedTarget)) {
+                return;
+            }
+            isNodeHovered = false;
+            // 延迟隐藏，给用户时间将鼠标移动到提示框上
+            setTimeout(() => {
+                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
+                    hideTooltip();
+                }
+            }, 50);
+        });
+        
+        // 鼠标移入提示框
+        tooltip.addEventListener('mouseover', function() {
+            isTooltipHovered = true;
+        });
+        
+        // 鼠标移出提示框
+        tooltip.addEventListener('mouseout', function(e) {
+            // 确保鼠标真的离开了提示框，而不是移到提示框的子元素上
+            if (this.contains(e.relatedTarget)) {
+                return;
+            }
+            isTooltipHovered = false;
+            // 延迟隐藏，避免闪烁
+            setTimeout(() => {
+                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
+                    hideTooltip();
+                }
+            }, 50);
+        });
+        
+        // 隐藏提示框函数
+        function hideTooltip() {
+            tooltip.style.opacity = '0';
+            tooltip.style.transform = 'translateY(-5px)';
+            
+            // 等待过渡效果完成后隐藏
+            setTimeout(() => {
+                tooltip.style.display = 'none';
+            }, 200);
+        }
         
         // 将提示框添加到body
         document.body.appendChild(tooltip);
         
         // 将指示器添加到节点内容后
         topicElement.appendChild(noteIndicator);
+        
+        // 添加小动画提示用户
+        noteIndicator.style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            noteIndicator.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                noteIndicator.style.transform = 'scale(1)';
+            }, 200);
+        }, 10);
+        
+        console.log('备注标记添加成功');
     } catch (e) {
         console.error('添加备注标记失败:', e);
     }
@@ -342,6 +509,7 @@ window.initToolbar = initToolbar;
 window.initZoomController = initZoomController;
 window.importFromMarkdown = importFromMarkdown;
 window.exportToMarkdown = exportToMarkdown;
+window.addNoteMarker = addNoteMarker;
 
 // 更新缩放级别
 function updateZoom() {
@@ -843,19 +1011,33 @@ function renderAllNoteMarkers() {
     }
     
     try {
-        // 清理所有现有的提示框
+        console.log('开始渲染所有备注标记...');
+        
+        // 清理所有现有的备注图标和提示框
+        console.log('清理现有备注标记...');
         document.querySelectorAll('.note-tooltip').forEach(tooltip => {
             tooltip.remove();
         });
+        document.querySelectorAll('.note-indicator').forEach(indicator => {
+            indicator.remove();
+        });
+        
+        // 获取所有节点对象
+        const nodes = jm.mind.nodes;
+        let noteCount = 0;
+        
+        console.log(`开始处理${Object.keys(nodes).length}个节点...`);
         
         // 遍历所有节点
-        Object.values(jm.mind.nodes).forEach(node => {
+        Object.values(nodes).forEach((node, index) => {
             if (node && node.data && node.data.note) {
+                console.log(`处理第${index+1}个节点: ${node.id} (${node.topic})`);
                 addNoteMarker(node);
+                noteCount++;
             }
         });
         
-        console.log('所有备注标记已渲染');
+        console.log(`所有备注标记已渲染，共添加了${noteCount}个备注图标`);
     } catch (e) {
         console.error('渲染备注标记失败:', e);
     }

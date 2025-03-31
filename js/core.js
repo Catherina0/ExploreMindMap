@@ -283,10 +283,12 @@ function initJsMind() {
                         if (selectedNode.topic) {
                             addMessage('ai', `您选中了节点："${selectedNode.topic}"`);
                             
-                            // 尝试获取子节点信息
-                            const childInfo = getChildrenInfo(selectedNode);
-                            if (childInfo) {
-                                addMessage('ai', `此节点包含的内容:\n${childInfo}`);
+                            // 尝试获取子节点信息，先检查函数是否存在
+                            if (typeof getChildrenInfo === 'function') {
+                                const childInfo = getChildrenInfo(selectedNode);
+                                if (childInfo) {
+                                    addMessage('ai', `此节点包含的内容:\n${childInfo}`);
+                                }
                             }
                         } else {
                             addMessage('ai', `您选中了ID为${selectedNode.id}的节点`);
@@ -376,20 +378,12 @@ function setupSidebars() {
                 
                 const noteText = noteInput.value.trim();
                 
-                // 确保节点有data对象
-                if (!selectedNode.data) {
-                    selectedNode.data = {};
-                }
-                
-                // 保存备注到节点
-                selectedNode.data.note = noteText;
-                
-                // 更新节点，触发重绘
-                jm.update_node(selectedNode.id, selectedNode.topic);
-                
-                // 重新渲染备注标记
-                if (typeof renderAllNoteMarkers === 'function') {
-                    renderAllNoteMarkers();
+                // 使用addNodeNote函数保存备注
+                if (addNodeNote(selectedNode.id, noteText)) {
+                    console.log('备注已成功添加到节点');
+                } else {
+                    console.error('添加备注失败');
+                    alert('备注保存失败，请重试');
                 }
                 
                 // 隐藏编辑器
@@ -397,8 +391,6 @@ function setupSidebars() {
                 if (editor) {
                     editor.classList.remove('show');
                 }
-                
-                console.log('节点备注已应用:', noteText);
             });
         } else {
             console.warn('找不到备注应用按钮');
@@ -727,3 +719,87 @@ function showNodeNote(node) {
     console.log('备注弹窗创建完成');
     return popup;
 }
+
+// 获取节点的子节点信息
+function getChildrenInfo(node) {
+    if (!node || !node.children || node.children.length === 0) {
+        return null;
+    }
+    
+    let childInfo = '';
+    node.children.forEach((child, index) => {
+        childInfo += `${index + 1}. ${child.topic}\n`;
+    });
+    
+    return childInfo;
+}
+
+// 添加节点备注
+function addNodeNote(nodeId, noteText) {
+    console.log('为节点添加备注:', nodeId);
+    
+    if (!nodeId || !noteText) {
+        console.warn('节点ID或备注内容为空，无法添加备注');
+        return false;
+    }
+    
+    try {
+        // 获取节点对象
+        const node = jm.get_node(nodeId);
+        if (!node) {
+            console.error('找不到节点:', nodeId);
+            return false;
+        }
+        
+        // 确保节点有data对象
+        if (!node.data) {
+            node.data = {};
+        }
+        
+        // 保存备注到节点
+        node.data.note = noteText;
+        
+        // 更新节点，触发重绘
+        jm.update_node(nodeId, node.topic, node.data);
+        
+        // 添加备注标记
+        if (typeof window.addNoteMarker === 'function') {
+            window.addNoteMarker(node);
+            console.log('已添加备注标记');
+        } else {
+            console.warn('addNoteMarker函数不可用，无法添加备注标记');
+        }
+        
+        console.log('备注添加成功');
+        return true;
+    } catch (e) {
+        console.error('添加备注失败:', e);
+        return false;
+    }
+}
+
+// 导出功能到全局作用域
+window.addNodeNote = addNodeNote;
+window.showNodeNote = showNodeNote;
+
+// 在index.html中修改现有的错误处理代码
+window.addEventListener('error', function(e) {
+    // 增强扩展错误过滤
+    if (e && e.target && e.target.src && 
+        (e.target.src.indexOf('chrome-extension://') !== -1 || 
+         e.target.src.indexOf('moz-extension://') !== -1)) {
+        console.debug('已屏蔽浏览器扩展错误:', e.target.src);
+        e.stopPropagation();
+        e.preventDefault();
+        return true;
+    }
+}, true);
+
+// 添加资源加载错误监听
+window.addEventListener('unhandledrejection', function(event) {
+    if (event.reason && event.reason.message && 
+        event.reason.message.indexOf('chrome-extension://') !== -1) {
+        event.preventDefault();
+        return true;
+    }
+}, true);

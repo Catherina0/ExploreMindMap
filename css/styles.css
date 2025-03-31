@@ -5,55 +5,229 @@
     padding: 0;
 }
 
+:root {
+    /* 基础颜色 */
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --primary-light: #e0e7ff;
+    --text-color: #1f2937;
+    --light-text: #6b7280;
+    --bg-color: #ffffff;
+    --sidebar-bg: #f9fafb;
+    --border-color: #e5e7eb;
+    --hover-bg: #f3f4f6;
+    --input-bg: #ffffff;
+    
+    /* 阴影 */
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --shadow-sm: 0 1px 2px var(--shadow-color);
+    --shadow-md: 0 4px 6px var(--shadow-color);
+    --shadow-lg: 0 10px 15px var(--shadow-color);
+    
+    /* 圆角 */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    
+    /* 转场动画 */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+    --transition-slow: 0.35s ease;
+}
+
 body {
-    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.5;
     display: flex;
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
 }
 
+/* 顶部导航栏 */
 .header {
-    padding: 10px 20px;
-    background-color: #f1f1f1;
-    border-bottom: 1px solid #ddd;
+    background-color: var(--bg-color);
+    box-shadow: var(--shadow-sm);
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10;
 }
 
-h1 {
-    font-size: 1.5rem;
-    color: #333;
-    text-align: center;
+.logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
+.logo img {
+    height: 28px;
+}
+
+/* 按钮样式 */
+.btn {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn:hover {
+    background-color: var(--hover-bg);
+    border-color: var(--light-text);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-icon span {
+    display: inline-flex;
+}
+
+/* 主容器 */
 .main-container {
     display: flex;
     flex: 1;
     overflow: hidden;
+    background-color: var(--bg-color);
+    position: relative;
 }
 
-/* 按钮通用样式 */
-.btn {
-    padding: 6px 12px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.btn:hover {
-    background-color: #45a049;
-}
-
-/* 工具栏 */
-#toolbar {
-    padding: 10px;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+/* 思维导图容器 */
+.mindmap-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    transition: width var(--transition-normal);
+    width: calc(100% - 400px);
     display: flex;
+    flex-direction: column;
+}
+
+.chat-hidden .mindmap-container {
+    width: 100%;
+}
+
+/* 聊天侧边栏显示/隐藏状态 */
+.chat-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 400px;
+    transition: transform var(--transition-normal);
+    z-index: 5;
+}
+
+.chat-hidden .chat-container {
+    transform: translateX(100%);
+}
+
+/* 工具栏样式 */
+.toolbar {
+    padding: 10px 20px;
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 12px;
+    box-shadow: var(--shadow-sm);
+    width: 100%;
+    z-index: 4;
+    transition: width var(--transition-normal);
+    position: relative;
+}
+
+.chat-hidden .toolbar {
+    width: 100%;
+}
+
+:not(.chat-hidden) .toolbar {
+    width: calc(100% - 400px);
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* jsMind容器 */
+#jsmind_container {
+    flex: 1;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 缩放控制器 */
+.zoom-controller {
+    position: absolute;
+    bottom: 20px;
+    right: 420px;
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 6px 10px;
+    z-index: 10;
+    border: 1px solid var(--border-color);
+    transition: right var(--transition-normal);
+}
+
+.chat-hidden .zoom-controller {
+    right: 20px;
+}
+
+.zoom-controller button {
+    margin: 0 4px;
+}
+
+.zoom-controller #zoom_text {
+    margin: 0 8px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    min-width: 50px;
+    text-align: center;
 }
 
 /* 下拉菜单 */
@@ -62,38 +236,128 @@ h1 {
     display: inline-block;
 }
 
-#save_dropdown {
+#save_dropdown, #load_dropdown {
     position: absolute;
-    background-color: #f9f9f9;
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
-    border-radius: 4px;
+    background-color: var(--bg-color);
+    min-width: 180px;
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     display: none;
+    border: 1px solid var(--border-color);
+    margin-top: 6px;
 }
 
-#save_dropdown a {
-    padding: 10px 16px;
+#save_dropdown a, #load_dropdown a {
+    padding: 12px 16px;
     text-decoration: none;
     display: block;
-    color: black;
+    color: var(--text-color);
+    transition: background-color var(--transition-fast);
+    font-size: 0.9rem;
 }
 
-#save_dropdown a:hover {
-    background-color: #f1f1f1;
+#save_dropdown a:hover, #load_dropdown a:hover {
+    background-color: var(--hover-bg);
 }
 
-/* 加载指示器 */
-#loading {
+/* 状态信息 */
+#status_info {
     position: absolute;
+    bottom: 16px;
+    left: 16px;
+    padding: 8px 12px;
+    background-color: var(--bg-color);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.85rem;
+    color: var(--light-text);
+    border: 1px solid var(--border-color);
+    z-index: 10;
+    opacity: 0.9;
+}
+
+/* 加载中指示器 */
+#loading {
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 16px 24px;
+    border-radius: var(--radius-md);
     display: none;
     z-index: 999;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(4px);
+}
+
+/* 按钮变体 */
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-color);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.btn-large {
+    padding: 12px 20px;
+    font-size: 1rem;
+}
+
+.btn-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--text-color);
+    color: white;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    z-index: 100;
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-md);
+}
+
+.tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--text-color) transparent transparent transparent;
+    z-index: 100;
+    margin-bottom: 3px;
 }

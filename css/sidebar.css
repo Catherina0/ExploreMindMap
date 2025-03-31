@@ -1,181 +1,254 @@
 /* 聊天容器样式 */
 .chat-container {
-    width: 350px;
-    border-left: 1px solid #ddd;
+    width: 400px;
+    border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    background-color: #fff;
+    background-color: var(--sidebar-bg);
+    box-shadow: -1px 0 5px var(--shadow-color);
 }
 
 .chat-header {
-    padding: 15px;
-    background-color: #f5f5f5;
-    font-weight: bold;
-    border-bottom: 1px solid #ddd;
+    padding: 18px 20px;
+    background-color: var(--sidebar-bg);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: center;
+    color: var(--text-color);
+    font-size: 1rem;
+    box-shadow: 0 1px 2px var(--shadow-color);
 }
 
 .chat-top-controls {
     display: flex;
     justify-content: space-between;
-    padding: 10px 15px;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #ddd;
+    padding: 14px 20px;
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.chat-top-controls .btn {
+    font-size: 0.85rem;
+    padding: 6px 12px;
 }
 
 /* API设置面板 */
 #api_settings {
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-bottom: 1px solid #ddd;
+    padding: 20px;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
     overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
     max-height: 0;
     opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 #api_settings.show {
-    max-height: 200px;
+    max-height: 300px;
     opacity: 1;
-    padding: 15px;
+    padding: 20px;
 }
 
 .setting-group {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
 .setting-group label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--light-text);
+    font-size: 0.9rem;
 }
 
 .setting-group select, 
 .setting-group input {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: white;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background-color: var(--input-bg);
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.setting-group select:focus, 
+.setting-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 /* 聊天消息区域 */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 15px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
+    gap: 20px;
+    background-color: var(--bg-color);
 }
 
 .message {
-    margin-bottom: 15px;
-    max-width: 85%;
-    border-radius: 8px;
-    padding: 10px 12px;
+    margin-bottom: 0;
+    max-width: 90%;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
     position: relative;
     font-size: 0.95rem;
-    line-height: 1.4;
+    line-height: 1.5;
+    animation: messageAppear 0.3s ease;
+    box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+@keyframes messageAppear {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .ai-message {
-    background-color: #f1f1f1;
+    background-color: var(--sidebar-bg);
     align-self: flex-start;
     margin-right: auto;
+    border: 1px solid var(--border-color);
 }
 
 .user-message {
-    background-color: #dcf8c6;
+    background-color: var(--primary-light);
     align-self: flex-end;
     margin-left: auto;
-    text-align: right;
+    border: 1px solid var(--primary-light);
 }
 
 /* 聊天控制区域 */
 .chat-controls {
-    padding: 10px 15px;
-    background-color: #f5f5f5;
-    border-top: 1px solid #ddd;
+    padding: 16px 20px;
+    background-color: var(--sidebar-bg);
+    border-top: 1px solid var(--border-color);
     display: flex;
     align-items: center;
+    gap: 12px;
+    position: relative;
 }
 
 #chat_input {
     flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
     outline: none;
     resize: none;
-    height: 44px;
-    min-height: 44px;
-    max-height: 120px;
+    height: 50px;
+    min-height: 50px;
+    max-height: 150px;
     font-family: inherit;
     overflow-y: auto;
+    background-color: var(--input-bg);
+    font-size: 0.95rem;
+    box-shadow: 0 1px 3px var(--shadow-color);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#chat_input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 #send_button {
-    padding: 8px 15px;
-    margin-left: 10px;
-    background-color: #4CAF50;
+    padding: 12px;
+    min-width: 50px;
+    height: 50px;
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: var(--radius-md);
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+#send_button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+#send_button:active {
+    transform: translateY(0);
 }
 
 /* 思维导图修改建议 */
 .mindmap-modification {
-    background-color: #f1f8e9;
-    border-left: 3px solid #8bc34a;
-    padding: 10px;
-    margin: 10px 0;
+    background-color: var(--primary-light);
+    border-left: 3px solid var(--primary-color);
+    padding: 14px 16px;
+    margin: 12px 0;
     font-family: monospace;
     white-space: pre;
     overflow-x: auto;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .modification-controls {
     display: flex;
     justify-content: flex-end;
-    margin-top: 10px;
-    gap: 10px;
+    margin-top: 14px;
+    gap: 12px;
 }
 
 .apply-button {
-    background-color: #4CAF50;
+    background-color: var(--primary-color);
     color: white;
     border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.apply-button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 .reject-button {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.reject-button:hover {
+    background-color: var(--hover-bg);
 }
 
 /* 侧边编辑器样式 */
 .sidebar-editor {
     position: fixed;
     top: 0;
-    right: -350px; /* 默认隐藏在右侧 */
-    width: 350px;
+    right: -400px; /* 默认隐藏在右侧 */
+    width: 400px;
     height: 100vh;
-    background: white;
-    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    background: var(--sidebar-bg);
+    box-shadow: -2px 0 15px rgba(0,0,0,0.12);
     z-index: 1000;
     transition: right 0.3s ease;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    border-left: 1px solid var(--border-color);
 }
 
 .sidebar-editor.show {
@@ -186,134 +259,210 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    background: #f9f9f9;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--sidebar-bg);
 }
 
 .sidebar-header h3 {
     margin: 0;
-    font-size: 18px;
-    color: #333;
+    font-size: 1.1rem;
+    color: var(--text-color);
+    font-weight: 600;
 }
 
 .sidebar-close {
     cursor: pointer;
-    font-size: 20px;
-    color: #666;
+    font-size: 22px;
+    color: var(--light-text);
+    transition: color 0.2s;
+}
+
+.sidebar-close:hover {
+    color: var(--text-color);
 }
 
 .sidebar-content {
     flex: 1;
-    padding: 15px;
+    padding: 20px;
     overflow-y: auto;
+    background-color: var(--bg-color);
 }
 
 .latex-input {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    min-height: 80px;
-    margin-bottom: 15px;
+    min-height: 100px;
+    margin-bottom: 20px;
     font-family: monospace;
     resize: vertical;
+    background-color: var(--input-bg);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.latex-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 .complete-button {
     width: 100%;
-    padding: 10px;
-    background: #4CAF50;
+    padding: 12px;
+    background: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 16px;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    transition: all 0.2s;
 }
 
 .complete-button:hover {
-    background: #45a049;
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.complete-button:active {
+    transform: translateY(0);
 }
 
 .common-formulas-title {
-    font-size: 16px;
-    font-weight: bold;
-    margin: 20px 0 15px 0;
-    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 24px 0 16px 0;
+    color: var(--text-color);
 }
 
 .formula-table {
     width: 100%;
     border-collapse: collapse;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
 }
 
-.formula-table td {
-    padding: 8px;
-    border: 1px solid #eee;
-    text-align: center;
+.formula-table th, .formula-table td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.formula-table td:first-child {
-    width: 50%;
+.formula-table th {
+    background-color: var(--sidebar-bg);
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.9rem;
 }
 
-.formula-table td:hover {
-    background: #f5f5f5;
-    cursor: pointer;
+.formula-table tr:last-child td {
+    border-bottom: none;
 }
 
-.preview-area {
-    margin: 15px 0;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    min-height: 60px;
+.formula-table tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.formula-name {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.formula-latex {
+    font-family: monospace;
+    color: var(--light-text);
+    font-size: 0.9rem;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #f9f9f9;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .chat-container, .sidebar-editor {
+        width: 100%;
+        right: -100%;
+    }
+    
+    .message {
+        max-width: 95%;
+    }
 }
 
 /* 按钮行 */
 .button-row {
     display: flex;
     justify-content: flex-end;
-    padding: 12px 15px;
-    border-top: 1px solid #eee;
+    padding: 16px 20px;
+    gap: 12px;
+    background-color: var(--sidebar-bg);
+    border-top: 1px solid var(--border-color);
 }
 
-.button-row button {
-    padding: 6px 15px;
-    border: none;
-    border-radius: 4px;
-    margin-left: 10px;
-    cursor: pointer;
+/* 编辑器区域样式 */
+.editor-section {
+    margin-bottom: 20px;
 }
 
-.button-row .cancel {
-    background: #f5f5f5;
-    color: #333;
-}
-
-.button-row .apply {
-    background: #4CAF50;
-    color: white;
-}
-
-/* 节点文本区域样式 */
 .node-textarea {
     width: 100%;
-    height: 150px;
-    padding: 8px;
+    min-height: 150px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-#modify_mindmap {
-    background-color: #4a6bdf;
-    color: white;
+.node-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
 }
 
-#modify_mindmap:hover {
-    background-color: #3a59c5;
+/* 公式预览区域 */
+.preview-area {
+    margin: 20px 0;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    min-height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-color);
 }

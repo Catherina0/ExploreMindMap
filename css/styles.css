@@ -61,6 +61,21 @@ body {
     z-index: 10;
 }
 
+/* 左侧占位元素 */
+.placeholder {
+    width: 100px;
+    visibility: hidden;
+}
+
+/* 添加一个新的容器用于标题 */
+.header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+}
+
 .logo {
     font-size: 1.4rem;
     font-weight: 700;
@@ -233,10 +248,18 @@ body {
     box-shadow: var(--shadow-md);
     z-index: 100;
     border-radius: var(--radius-sm);
-    overflow: hidden;
+    overflow: visible;
     display: none;
     border: 1px solid var(--border-color);
     margin-top: 6px;
+    left: 0; /* 确保从左侧开始 */
+}
+
+/* 如果菜单靠近右侧边缘，从右侧显示 */
+.btn-group:last-child #save_dropdown,
+.btn-group:last-child #load_dropdown {
+    left: auto;
+    right: 0;
 }
 
 #save_dropdown a, #load_dropdown a {
@@ -246,6 +269,7 @@ body {
     color: var(--text-color);
     transition: background-color var(--transition-fast);
     font-size: 0.9rem;
+    white-space: nowrap; /* 防止文本换行 */
 }
 
 #save_dropdown a:hover, #load_dropdown a:hover {

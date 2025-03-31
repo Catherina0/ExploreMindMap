@@ -162,24 +162,23 @@ function initChat() {
         }, 300); // 等待过渡动画完成
     });
     
-    // 默认隐藏AI助手侧边栏
+    // 默认显示AI助手侧边栏
     const appContainer = document.querySelector('.app-container');
-    appContainer.classList.add('chat-hidden');
     
-    // 更新按钮状态
+    // 更新按钮状态 - 显示状态的文本和图标
     const toggleButton = document.getElementById('toggle_chat');
     const buttonText = toggleButton.querySelector('span');
     const buttonIcon = toggleButton.querySelector('i');
     
-    buttonText.textContent = '显示助手';
-    if (buttonIcon) buttonIcon.className = 'fas fa-eye';
+    buttonText.textContent = 'AI 助手';
+    if (buttonIcon) buttonIcon.className = 'fas fa-comments';
     
     // 调整UI元素初始状态
     const zoomController = document.querySelector('.zoom-controller');
     
     if (zoomController) {
         console.log('设置缩放控制器初始位置');
-        zoomController.style.right = '20px';
+        zoomController.style.right = '420px'; // 调整为显示状态下的位置
     }
     
     // 调整思维导图大小以适应整个区域
@@ -198,7 +197,7 @@ function initChat() {
                     return;
                 }
                 
-                console.log('初始化AI助手状态: 隐藏');
+                console.log('初始化AI助手状态: 显示');
                 
                 // 设置缩放控制器初始位置
                 if (zoomController) {
@@ -247,7 +246,7 @@ function initChat() {
         }
     }, 500); // 等待界面完全加载
     
-    console.log('聊天界面初始化完成 - AI助手默认隐藏');
+    console.log('聊天界面初始化完成 - AI助手默认显示');
 }
 
 // 发送消息

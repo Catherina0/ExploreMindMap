@@ -288,6 +288,12 @@ function switchLanguage(lang) {
     // 确保语言按钮显示正确
     updateLanguageButton();
     
+    // 重建工具栏，确保图标和文本都正确显示
+    if (typeof window.initToolbar === 'function') {
+        console.log('语言切换后重建工具栏');
+        window.initToolbar();
+    }
+    
     // 触发自定义事件，以便其他脚本可以响应语言变化
     const event = new CustomEvent('languageChanged', { detail: { language: lang } });
     document.dispatchEvent(event);
@@ -332,7 +338,15 @@ function updateAllTexts() {
     document.querySelectorAll('[data-i18n-text]').forEach(element => {
         const key = element.getAttribute('data-i18n-text');
         if (key) {
-            element.textContent = t(key);
+            // 检查元素中是否有.btn-text子元素
+            const textSpan = element.querySelector('.btn-text');
+            if (textSpan) {
+                // 如果有.btn-text子元素，只更新该元素的文本，保留图标
+                textSpan.textContent = t(key);
+            } else {
+                // 没有找到.btn-text子元素，直接更新整个元素的文本
+                element.textContent = t(key);
+            }
         }
     });
     
@@ -381,6 +395,12 @@ function initI18n() {
         
         // 更新语言显示文本
         updateLanguageButton();
+        
+        // 确保工具栏正确初始化（包含图标）
+        if (typeof window.initToolbar === 'function') {
+            console.log('I18n初始化后显式调用工具栏初始化');
+            window.initToolbar();
+        }
         
         // 找到语言切换按钮并绑定事件
         const langToggle = document.getElementById('language_toggle');

@@ -30,66 +30,96 @@ window.onload = function() {
     // 初始化jsMind
     initJsMind();
     
-    // // 立刻设置下拉菜单，因为它只依赖基础DOM (注释掉，因为initToolbar会重建它)
-    // setupDropdownMenus();
-
-    // 延迟初始化其他组件，确保jsMind完全初始化或处理依赖问题
-    setTimeout(function() {
-        console.log('初始化其他组件...');
+    // 确保FontAwesome图标库已加载
+    ensureFontAwesomeLoaded(() => {
+        console.log('FontAwesome图标库已加载');
         
-        // 初始化工具栏 (会重建工具栏DOM)
-        console.log('调用initToolbar...', typeof initToolbar);
-        if (typeof initToolbar === 'function') {
-            try {
-                console.log('开始初始化工具栏');
-                if (!window.toolbarInitialized) {
-                    initToolbar();
-                    window.toolbarInitialized = true;
-                    console.log('工具栏初始化成功');
-                } else {
-                    console.log('工具栏已经初始化过，跳过');
+        // 延迟初始化其他组件，确保jsMind完全初始化或处理依赖问题
+        setTimeout(function() {
+            console.log('初始化其他组件...');
+            
+            // 初始化工具栏 (会重建工具栏DOM)
+            console.log('调用initToolbar...', typeof initToolbar);
+            if (typeof initToolbar === 'function') {
+                try {
+                    console.log('开始初始化工具栏');
+                    if (!window.toolbarInitialized) {
+                        initToolbar();
+                        window.toolbarInitialized = true;
+                        console.log('工具栏初始化成功');
+                    } else {
+                        console.log('工具栏已经初始化过，跳过');
+                    }
+                } catch (e) {
+                    console.error('初始化工具栏出错:', e);
                 }
-            } catch (e) {
-                console.error('初始化工具栏出错:', e);
+            } else {
+                console.warn('initToolbar函数未定义，全局对象:', Object.keys(window).filter(k => k.includes('init')));
             }
-        } else {
-            console.warn('initToolbar函数未定义，全局对象:', Object.keys(window).filter(k => k.includes('init')));
-        }
-        
-        // 初始化缩放控制器
-        if (typeof initZoomController === 'function') {
-            initZoomController();
-        } else {
-            console.warn('initZoomController函数未定义');
-        }
-        
-        // 初始化侧边栏
-        setupSidebars();
-        
-        // 设置DOM观察器
-        setupDOMObserver();
-        
-        // 设置节点监控
-        const stopNodeMonitor = setupNodeMonitor();
-        
-        // 初始化聊天界面
-        if (typeof initChat === 'function') {
-            initChat();
-        } else {
-            console.warn('initChat函数未定义');
-        }
-        
-        // 在initToolbar之后设置下拉菜单，因为它依赖于initToolbar创建的元素
-        setupDropdownMenus();
-        
-        // 确保i18n已经被应用到所有已经初始化的元素
-        if (window.i18n && typeof window.i18n.updateAllTexts === 'function') {
-            window.i18n.updateAllTexts();
-        }
-        
-        console.log('应用初始化完成');
-    }, 1000); // 保持你设置的延迟
+            
+            // 初始化缩放控制器
+            if (typeof initZoomController === 'function') {
+                initZoomController();
+            } else {
+                console.warn('initZoomController函数未定义');
+            }
+            
+            // 初始化侧边栏
+            setupSidebars();
+            
+            // 设置DOM观察器
+            setupDOMObserver();
+            
+            // 设置节点监控
+            const stopNodeMonitor = setupNodeMonitor();
+            
+            // 初始化聊天界面
+            if (typeof initChat === 'function') {
+                initChat();
+            } else {
+                console.warn('initChat函数未定义');
+            }
+            
+            // 在initToolbar之后设置下拉菜单，因为它依赖于initToolbar创建的元素
+            setupDropdownMenus();
+            
+            // 确保i18n已经被应用到所有已经初始化的元素
+            if (window.i18n && typeof window.i18n.updateAllTexts === 'function') {
+                window.i18n.updateAllTexts();
+            }
+            
+            console.log('应用初始化完成');
+        }, 1000); // 保持你设置的延迟
+    });
 };
+
+// 确保FontAwesome图标库已完全加载
+function ensureFontAwesomeLoaded(callback) {
+    // 检查是否可以使用FontAwesome图标
+    const testIcon = document.createElement('i');
+    testIcon.className = 'fas fa-check';
+    testIcon.style.display = 'none';
+    document.body.appendChild(testIcon);
+    
+    // 获取计算后的样式
+    const computedStyle = window.getComputedStyle(testIcon);
+    const fontFamily = computedStyle.getPropertyValue('font-family');
+    
+    document.body.removeChild(testIcon);
+    
+    // 如果字体族包含"Font Awesome"，则认为已加载
+    if (fontFamily.includes('Font Awesome') || fontFamily.includes('FontAwesome')) {
+        console.log('FontAwesome已加载，直接继续');
+        callback();
+    } else {
+        console.log('等待FontAwesome加载...');
+        // 尝试等待FontAwesome加载
+        setTimeout(() => {
+            console.log('FontAwesome加载超时，继续初始化');
+            callback();
+        }, 500);
+    }
+}
 
 // 生成唯一ID
 function generateUniqueID() {

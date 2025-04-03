@@ -412,3 +412,31 @@ html[lang="en"] .toolbar .btn {
     padding-top: 5px;
     border-top: 1px solid #eee;
 }
+
+/* 按钮内容区样式 */
+.btn-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+/* 确保图标固定显示 */
+.btn-content i.fas {
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 5px !important;
+    text-align: center !important;
+    font-size: 14px !important; 
+}
+
+/* 按钮文本样式 */
+.btn-text {
+    display: inline-block !important;
+    flex: 1 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}

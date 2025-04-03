@@ -7,6 +7,79 @@ let relationLines = []; // 保存关联线信息
 
 // 注意：jm和selectedNode变量已在core.js中定义，此处不再重复定义
 
+// 检查FontAwesome是否可用
+function isFontAwesomeAvailable() {
+    // 创建一个测试元素
+    const testIcon = document.createElement('i');
+    testIcon.className = 'fas fa-check';
+    testIcon.style.display = 'none';
+    document.body.appendChild(testIcon);
+    
+    // 获取样式
+    const style = window.getComputedStyle(testIcon);
+    const fontFamily = style.getPropertyValue('font-family');
+    
+    // 移除测试元素
+    document.body.removeChild(testIcon);
+    
+    // 检查字体族是否包含FontAwesome
+    return fontFamily.includes('Font Awesome') || fontFamily.includes('FontAwesome');
+}
+
+// 为了确保图标在所有情况下都正确加载，在全局范围存储FontAwesome状态
+window.faAvailable = false;
+
+// 通过DOM观察者监控FontAwesome的加载
+function monitorFontAwesomeLoading() {
+    // 检查当前状态
+    window.faAvailable = isFontAwesomeAvailable();
+    
+    // 如果已加载，立即通知
+    if (window.faAvailable) {
+        console.log('FontAwesome已加载完成，可以使用图标');
+        document.dispatchEvent(new CustomEvent('fontAwesomeLoaded'));
+        return;
+    }
+    
+    console.log('FontAwesome尚未加载，等待加载...');
+    
+    // 设置样式表加载观察者
+    const observer = new MutationObserver((mutations) => {
+        if (isFontAwesomeAvailable()) {
+            window.faAvailable = true;
+            console.log('FontAwesome成功加载，现在可以使用图标');
+            document.dispatchEvent(new CustomEvent('fontAwesomeLoaded'));
+            observer.disconnect();
+        }
+    });
+    
+    // 观察head元素中样式表的变化
+    observer.observe(document.head, {
+        childList: true,
+        subtree: true
+    });
+    
+    // 设置超时，确保不会永远等待
+    setTimeout(() => {
+        window.faAvailable = isFontAwesomeAvailable();
+        if (!window.faAvailable) {
+            console.warn('FontAwesome加载超时，图标可能不可用');
+        }
+        observer.disconnect();
+    }, 5000);
+}
+
+// 在脚本加载时立即开始监控FontAwesome
+monitorFontAwesomeLoading();
+
+// 在fontAwesomeLoaded事件触发时重新初始化工具栏
+document.addEventListener('fontAwesomeLoaded', () => {
+    console.log('收到FontAwesome加载事件，重新初始化工具栏');
+    if (typeof initToolbar === 'function' && document.getElementById('toolbar')) {
+        initToolbar();
+    }
+});
+
 // 初始化工具栏
 function initToolbar() {
     console.log('初始化工具栏');
@@ -62,11 +135,40 @@ function initToolbar() {
             'load_map': 'fa-folder-open'
         };
         
+        // 创建图标和文本容器
+        const buttonContent = document.createElement('div');
+        buttonContent.className = 'btn-content';
+        buttonContent.style.display = 'flex';
+        buttonContent.style.alignItems = 'center';
+        buttonContent.style.justifyContent = 'center';
+        buttonContent.style.width = '100%';
+        
         if (iconMap[id]) {
-            const icon = document.createElement('i');
-            icon.className = `fas ${iconMap[id]}`;
-            btn.appendChild(icon);
-            btn.innerHTML += ' ' + text; // 添加空格和文本
+            try {
+                // 检查FontAwesome是否可用
+                const fontAwesomeAvailable = window.faAvailable || 
+                    document.querySelector('link[href*="font-awesome"]') || 
+                    isFontAwesomeAvailable();
+                
+                if (fontAwesomeAvailable) {
+                    const icon = document.createElement('i');
+                    icon.className = `fas ${iconMap[id]}`;
+                    icon.style.marginRight = '5px'; // 确保图标和文本有间距
+                    buttonContent.appendChild(icon);
+                }
+                
+                // 添加文本作为单独的元素
+                const textSpan = document.createElement('span');
+                textSpan.textContent = text;
+                textSpan.className = 'btn-text';
+                buttonContent.appendChild(textSpan);
+                
+                // 将整个内容添加到按钮
+                btn.appendChild(buttonContent);
+            } catch (e) {
+                console.error(`添加图标时出错: ${e.message}`, e);
+                btn.textContent = text;
+            }
         } else {
             btn.textContent = text;
         }

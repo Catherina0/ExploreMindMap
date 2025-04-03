@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 思维导图助手</title>
+    <title data-i18n="app_title">AI 思维导图助手</title>
     <!-- 错误处理 - 抑制Chrome扩展错误 -->
     <script>
         // 捕获并处理资源加载错误
@@ -106,13 +106,17 @@
                     <path d="M19 22v-6"></path>
                     <path d="M22 19l-3-3-3 3"></path>
                 </svg>
-                <span>AI 思维导图助手</span>
+                <span data-i18n="app_title">AI 思维导图助手</span>
             </a>
         </div>
-        <div>
+        <div class="header-right">
+            <button id="language_toggle" class="btn btn-lang" type="button" aria-label="切换语言">
+                <i class="fas fa-globe"></i>
+                <span id="current_lang">中文/English</span>
+            </button>
             <button id="toggle_chat" class="btn btn-primary btn-icon">
                 <i class="fas fa-comments"></i>
-                <span>AI 助手</span>
+                <span data-i18n="ai_assistant">AI 助手</span>
             </button>
         </div>
     </div>
@@ -185,7 +189,7 @@
                     <button id="add_summary" class="btn tooltip" data-tooltip="生成总结" aria-label="生成总结">
                         <i class="fas fa-file-alt"></i>
                     </button>
-                    <button id="modify_mindmap" class="btn btn-primary tooltip" data-tooltip="使用AI修改" aria-label="使用AI修改">
+                    <button id="modify_mindmap" type="button" class="btn btn-primary tooltip" data-tooltip="使用AI修改" aria-label="使用AI修改">
                         <i class="fas fa-magic"></i> AI修改
                     </button>
                 </div>
@@ -193,7 +197,7 @@
             
             <!-- 思维导图容器 -->
             <div id="jsmind_container">
-                <div id="loading">处理中...</div>
+                <div id="loading" data-i18n="loading">处理中...</div>
             </div>
             
             <!-- 缩放控制器 -->
@@ -218,33 +222,33 @@
         <div class="chat-container">
             <!-- 聊天头部 -->
             <div class="chat-header">
-                <span>AI思维导图助手</span>
+                <span data-i18n="chat_header">AI思维导图助手</span>
             </div>
             
             <!-- 聊天控制区域 -->
             <div class="chat-top-controls">
                 <button id="new_conversation" class="btn btn-secondary btn-icon">
                     <i class="fas fa-plus"></i>
-                    <span>新对话</span>
+                    <span data-i18n="new_conversation">新对话</span>
                 </button>
                 <button id="ai_toggle" class="btn btn-secondary btn-icon">
                     <i class="fas fa-robot"></i>
-                    <span>AI助手</span>
+                    <span data-i18n="ai_toggle">AI助手</span>
                 </button>
-                <button id="modify_mindmap" class="btn btn-secondary btn-icon">
+                <button id="modify_mindmap_chat" class="btn btn-secondary btn-icon">
                     <i class="fas fa-magic"></i>
-                    <span>修改导图</span>
+                    <span data-i18n="modify_map">修改导图</span>
                 </button>
                 <button id="settings_toggle" class="btn btn-secondary btn-icon">
                     <i class="fas fa-cog"></i>
-                    <span>设置</span>
+                    <span data-i18n="settings">设置</span>
                 </button>
             </div>
             
             <!-- API设置面板 -->
             <div id="api_settings">
                 <div class="setting-group">
-                    <label for="ai_service">AI服务:</label>
+                    <label for="ai_service" data-i18n="ai_service">AI服务:</label>
                     <select id="ai_service">
                         <option value="deepseek">Deepseek</option>
                         <option value="openai">OpenAI</option> 
@@ -252,27 +256,27 @@
                     </select>
                 </div>
                 <div class="setting-group">
-                    <label for="api_key">API密钥:</label>
-                    <input type="password" id="api_key" placeholder="输入API密钥" autocomplete="new-password">
+                    <label for="api_key" data-i18n="api_key">API密钥:</label>
+                    <input type="password" id="api_key" data-i18n="api_key_placeholder" placeholder="输入API密钥" autocomplete="new-password">
                 </div>
                 <div class="setting-group azure-settings" style="display: none;">
-                    <label for="resource_name">资源名称:</label>
-                    <input type="text" id="resource_name" placeholder="Azure资源名称">
-                    <label for="deployment_name">部署名称:</label>
-                    <input type="text" id="deployment_name" placeholder="如：gpt-35-turbo">
+                    <label for="resource_name" data-i18n="resource_name">资源名称:</label>
+                    <input type="text" id="resource_name" data-i18n="resource_name_placeholder" placeholder="Azure资源名称">
+                    <label for="deployment_name" data-i18n="deployment_name">部署名称:</label>
+                    <input type="text" id="deployment_name" data-i18n="deployment_name_placeholder" placeholder="如：gpt-4">
                 </div>
             </div>
             
             <!-- 聊天消息区域 -->
             <div class="chat-messages" id="chat_messages">
-                <div class="message ai-message">
+                <div class="message ai-message" data-i18n="chat_welcome">
                     您好！我是思维导图AI助手。选择一个节点并向我提问，我将帮助您扩展思维导图。
                 </div>
             </div>
             
             <!-- 聊天输入区域 -->
             <div class="chat-controls">
-                <textarea id="chat_input" placeholder="输入您的问题..." rows="1"></textarea>
+                <textarea id="chat_input" data-i18n="chat_placeholder" placeholder="输入您的问题..." rows="1"></textarea>
                 <button id="send_button" aria-label="发送">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -283,17 +287,17 @@
     <!-- LaTeX侧边栏编辑器 -->
     <div class="sidebar-editor" id="latex_sidebar">
         <div class="sidebar-header">
-            <h3>公式</h3>
+            <h3 data-i18n="formula">公式</h3>
             <span class="sidebar-close">&times;</span>
         </div>
         <div class="sidebar-content">
-            <textarea class="latex-input" id="sidebar_latex_formula" placeholder="请输入LaTeX语法"></textarea>
+            <textarea class="latex-input" id="sidebar_latex_formula" data-i18n="enter_latex" placeholder="请输入LaTeX语法"></textarea>
             
             <div class="preview-area" id="sidebar_latex_preview"></div>
             
-            <button class="complete-button" id="sidebar_latex_apply">完成</button>
+            <button class="complete-button" id="sidebar_latex_apply" data-i18n="complete">完成</button>
             
-            <div class="common-formulas-title">常用公式</div>
+            <div class="common-formulas-title" data-i18n="common_formulas">常用公式</div>
             <table class="formula-table">
                 <tr>
                     <td><span>a^2</span></td>
@@ -382,34 +386,34 @@
     <!-- 备注编辑器 -->
     <div class="sidebar-editor" id="note_editor">
         <div class="sidebar-header">
-            <h3>节点备注</h3>
+            <h3 data-i18n="node_note">节点备注</h3>
             <span class="sidebar-close">&times;</span>
         </div>
         <div class="sidebar-content">
             <div class="editor-section">
-                <textarea id="node_note" class="node-textarea" placeholder="输入节点备注..."></textarea>
+                <textarea id="node_note" class="node-textarea" data-i18n="enter_note" placeholder="输入节点备注..."></textarea>
             </div>
         </div>
         <div class="button-row">
-            <button class="cancel btn btn-secondary" id="note_cancel">取消</button>
-            <button class="apply btn btn-primary" id="note_apply">应用</button>
+            <button class="cancel btn btn-secondary" id="note_cancel" data-i18n="cancel">取消</button>
+            <button class="apply btn btn-primary" id="note_apply" data-i18n="apply">应用</button>
         </div>
     </div>
     
     <!-- 摘要编辑器 -->
     <div class="sidebar-editor" id="summary_editor">
         <div class="sidebar-header">
-            <h3>节点摘要</h3>
+            <h3 data-i18n="node_summary">节点摘要</h3>
             <span class="sidebar-close">&times;</span>
         </div>
         <div class="sidebar-content">
             <div class="editor-section">
-                <input type="text" id="node_summary" placeholder="输入简短摘要..." style="width:100%; padding:8px;">
+                <input type="text" id="node_summary" data-i18n="enter_summary" placeholder="输入简短摘要...">
             </div>
         </div>
         <div class="button-row">
-            <button class="cancel btn btn-secondary" id="summary_cancel">取消</button>
-            <button class="apply btn btn-primary" id="summary_apply">应用</button>
+            <button class="cancel btn btn-secondary" id="summary_cancel" data-i18n="cancel">取消</button>
+            <button class="apply btn btn-primary" id="summary_apply" data-i18n="apply">应用</button>
         </div>
     </div>
 
@@ -420,6 +424,7 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
 
     <!-- 第二步：加载应用核心组件 -->
+    <script src="js/i18n.js"></script>
     <script src="js/mindmap.js"></script>
     <script src="js/latex-editor.js"></script>
     <script src="js/ai-assistant.js"></script>
@@ -433,12 +438,12 @@
             // 尝试修复非被动事件监听器警告（不影响功能，仅消除警告）
             const originalAddEventListener = EventTarget.prototype.addEventListener;
             EventTarget.prototype.addEventListener = function(type, listener, options) {
-                if (type === 'touchstart' || type === 'touchmove' || type === 'wheel') {
+                if (type === 'touchstart' || type === 'touchmove' || type === 'wheel' || type === 'mousewheel') {
                     // 将触摸和滚轮事件设置为被动模式
-                    const passiveOptions = options ? 
-                        (typeof options === 'object' ? 
-                            Object.assign({}, options, { passive: true }) : 
-                            { passive: true }) : 
+                    const passiveOptions = options ?
+                        (typeof options === 'object' ?
+                            Object.assign({}, options, { passive: true }) :
+                            { passive: true }) :
                         { passive: true };
                     originalAddEventListener.call(this, type, listener, passiveOptions);
                 } else {

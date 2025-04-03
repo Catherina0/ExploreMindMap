@@ -31,7 +31,7 @@ function initChat() {
     });
     
     // 绑定修改思维导图按钮
-    document.getElementById('modify_mindmap').addEventListener('click', function() {
+    document.getElementById('modify_mindmap_chat').addEventListener('click', function() {
         console.log('用户请求修改思维导图');
         requestMindmapModification();
     });
@@ -602,7 +602,7 @@ async function processAIRequest(query) {
     const apiKey = document.getElementById('api_key').value;
     
     if (!apiKey) {
-        addMessage('ai', '请先点击设置，输入API密钥。');
+        addMessage('ai', window.i18n.t('api_settings_prompt'));
         document.getElementById('api_settings').classList.add('show');
         return;
     }
@@ -876,7 +876,9 @@ function toggleAIAssistant() {
     // 更新按钮样式
     const toggleButton = document.getElementById('ai_toggle');
     if (toggleButton) {
-        toggleButton.textContent = aiAssistantEnabled ? '关闭AI助手' : '开启AI助手';
+        toggleButton.textContent = aiAssistantEnabled ? 
+            window.i18n.t('ai_toggle') + ' (ON)' : 
+            window.i18n.t('ai_toggle') + ' (OFF)';
         toggleButton.style.backgroundColor = aiAssistantEnabled ? '#f44336' : '#4CAF50';
     }
     
@@ -890,20 +892,20 @@ function toggleAIAssistant() {
 async function requestMindmapModification() {
     // 检查AI助手是否开启
     if (!aiAssistantEnabled) {
-        addMessage('ai', '请先开启AI助手，才能使用思维导图修改功能。');
+        addMessage('ai', window.i18n.t('enable_ai_first'));
         console.log('AI助手已关闭，不允许修改思维导图');
         return;
     }
     
     // 检查是否有选中的节点
     if (!selectedNode) {
-        addMessage('ai', '请先选择一个节点，然后再请求修改思维导图。');
+        addMessage('ai', window.i18n.t('select_node_for_modify'));
         return;
     }
     
     // 验证选中节点的有效性
     if (!selectedNode.id || typeof selectedNode.id !== 'string') {
-        addMessage('ai', '选中的节点无效，请重新选择一个节点。');
+        addMessage('ai', window.i18n.t('invalid_node_id'));
         console.error('选中节点无效:', selectedNode);
         return;
     }
@@ -911,7 +913,7 @@ async function requestMindmapModification() {
     // 验证节点在jsMind中是否存在
     const nodeInMind = jm.get_node(selectedNode.id);
     if (!nodeInMind) {
-        addMessage('ai', '选中的节点在思维导图中不存在，请重新选择一个节点。');
+        addMessage('ai', window.i18n.t('node_not_found', selectedNode.id));
         console.error('节点不存在于jsMind中:', selectedNode.id);
         return;
     }
@@ -919,7 +921,7 @@ async function requestMindmapModification() {
     // 检查API密钥是否存在
     const apiKey = document.getElementById('api_key').value;
     if (!apiKey) {
-        addMessage('ai', '请先点击设置，输入API密钥。');
+        addMessage('ai', window.i18n.t('api_settings_prompt'));
         document.getElementById('api_settings').classList.add('show');
         return;
     }

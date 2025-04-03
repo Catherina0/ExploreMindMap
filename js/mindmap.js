@@ -21,13 +21,29 @@ function initToolbar() {
     // 清空工具栏，防止重复添加
     toolbar.innerHTML = '';
     
+    // 翻译函数 - 如果i18n可用则使用，否则返回原文
+    const translate = (key) => {
+        return window.i18n && typeof window.i18n.t === 'function' ? 
+            window.i18n.t(key) : key;
+    };
+    
     // 定义按钮和分隔符创建函数
-    const createButton = (id, text, title, handler) => {
+    const createButton = (id, textKey, titleKey, handler) => {
         const btn = document.createElement('button');
         btn.className = 'btn';
         btn.id = id;
+        
+        // 使用翻译函数获取文本
+        const text = translate(textKey);
+        const title = translate(titleKey) || text;
+        
         btn.textContent = text;
-        btn.title = title || text;
+        btn.title = title;
+        
+        // 保存原始key以便语言切换时更新
+        btn.dataset.i18nText = textKey;
+        btn.dataset.i18nTitle = titleKey;
+        
         if (handler) {
             btn.addEventListener('click', handler);
         }
@@ -43,28 +59,29 @@ function initToolbar() {
     };
     
     // 添加基本操作按钮
-    toolbar.appendChild(createButton('add_node', '添加节点', '添加新节点', addNode));
-    toolbar.appendChild(createButton('edit_node', '编辑节点', '编辑选中节点', editNode));
-    toolbar.appendChild(createButton('delete_node', '删除节点', '删除选中节点', deleteNode));
-    toolbar.appendChild(createButton('expand_all', '展开全部', '展开所有节点', () => jm.expand_all()));
-    toolbar.appendChild(createButton('collapse_all', '折叠全部', '折叠所有节点', () => jm.collapse_all()));
+    toolbar.appendChild(createButton('add_node', 'add_node', 'add_node', addNode));
+    toolbar.appendChild(createButton('edit_node', 'edit_node', 'edit_node', editNode));
+    toolbar.appendChild(createButton('delete_node', 'delete_node', 'delete_node', deleteNode));
+    toolbar.appendChild(createButton('expand_all', 'expand_all', 'expand_all', () => jm.expand_all()));
+    toolbar.appendChild(createButton('collapse_all', 'collapse_all', 'collapse_all', () => jm.collapse_all()));
     
     // 添加主题选择器
     const themeSelect = document.createElement('select');
     themeSelect.id = 'theme_select';
-    themeSelect.title = '选择主题';
+    themeSelect.title = translate('select_theme');
     
     const themes = [
-        {value: 'primary', text: '蓝色主题'},
-        {value: 'warning', text: '黄色主题'},
-        {value: 'danger', text: '红色主题'},
-        {value: 'success', text: '绿色主题'}
+        {value: 'primary', textKey: 'blue_theme'},
+        {value: 'warning', textKey: 'yellow_theme'},
+        {value: 'danger', textKey: 'red_theme'},
+        {value: 'success', textKey: 'green_theme'}
     ];
     
     themes.forEach(theme => {
         const option = document.createElement('option');
         option.value = theme.value;
-        option.textContent = theme.text;
+        option.textContent = translate(theme.textKey);
+        option.dataset.i18nText = theme.textKey; // 确保使用正确的属性名
         themeSelect.appendChild(option);
     });
     
@@ -78,10 +95,10 @@ function initToolbar() {
     toolbar.appendChild(createSeparator());
     
     // 添加高级功能按钮
-    toolbar.appendChild(createButton('latex_button', '公式', '插入LaTeX公式', openLatexEditor));
-    toolbar.appendChild(createButton('note_button', '备注', '添加节点备注', openNoteEditor));
-    // toolbar.appendChild(createButton('relation_button', '关联线', '创建节点间关联', startRelationLine));
-    // toolbar.appendChild(createButton('summary_button', '摘要', '为节点添加摘要', openSummaryEditor));
+    toolbar.appendChild(createButton('latex_button', 'formula', 'formula', openLatexEditor));
+    toolbar.appendChild(createButton('note_button', 'note', 'note', openNoteEditor));
+    // toolbar.appendChild(createButton('relation_button', 'relation_line', 'relation_line', startRelationLine));
+    // toolbar.appendChild(createButton('summary_button', 'summary', 'summary', openSummaryEditor));
     // 摘要和关联线功能暂时关掉 后面慢慢写
     // 添加分隔符
     toolbar.appendChild(createSeparator());
@@ -91,7 +108,7 @@ function initToolbar() {
     saveGroup.className = 'btn-group';
     
     // 主保存按钮
-    const saveBtn = createButton('save_map', '保存', '保存思维导图');
+    const saveBtn = createButton('save_map', 'save_mindmap', 'save_mindmap');
     saveBtn.onclick = function() {
         // 切换下拉菜单的显示状态
         const dropdown = document.getElementById('save_dropdown');
@@ -106,7 +123,8 @@ function initToolbar() {
     // 添加JSON保存选项
     const saveJsonOption = document.createElement('a');
     saveJsonOption.href = '#';
-    saveJsonOption.textContent = '保存为JSON';
+    saveJsonOption.textContent = translate('save_as_json');
+    saveJsonOption.dataset.i18nText = 'save_as_json';
     saveJsonOption.onclick = function(e) {
         e.preventDefault();
         saveAsJson();
@@ -116,7 +134,8 @@ function initToolbar() {
     // 添加MD保存选项
     const saveMdOption = document.createElement('a');
     saveMdOption.href = '#';
-    saveMdOption.textContent = '导出为Markdown';
+    saveMdOption.textContent = translate('export_as_markdown');
+    saveMdOption.dataset.i18nText = 'export_as_markdown';
     saveMdOption.onclick = function(e) {
         e.preventDefault();
         exportToMarkdown();
@@ -137,7 +156,7 @@ function initToolbar() {
     loadGroup.className = 'btn-group';
     
     // 加载按钮
-    const loadBtn = createButton('load_map', '加载', '加载思维导图');
+    const loadBtn = createButton('load_map', 'load_mindmap', 'load_mindmap');
     loadBtn.onclick = function() {
         // 切换下拉菜单的显示状态
         const dropdown = document.getElementById('load_dropdown');
@@ -152,7 +171,8 @@ function initToolbar() {
     // 添加JSON加载选项
     const loadJsonOption = document.createElement('a');
     loadJsonOption.href = '#';
-    loadJsonOption.textContent = '加载JSON文件';
+    loadJsonOption.textContent = translate('load_json_file');
+    loadJsonOption.dataset.i18nText = 'load_json_file';
     loadJsonOption.onclick = function(e) {
         e.preventDefault();
         loadMindMap();
@@ -162,7 +182,8 @@ function initToolbar() {
     // 添加Markdown导入选项
     const loadMdOption = document.createElement('a');
     loadMdOption.href = '#';
-    loadMdOption.textContent = '导入Markdown';
+    loadMdOption.textContent = translate('import_markdown');
+    loadMdOption.dataset.i18nText = 'import_markdown';
     loadMdOption.onclick = function(e) {
         e.preventDefault();
         importFromMarkdown();
@@ -190,6 +211,16 @@ function initToolbar() {
     
     console.log('工具栏初始化完成');
 }
+
+// 注册语言变化监听器以重新初始化工具栏
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('languageChanged', () => {
+        console.log('检测到语言变化，重新初始化工具栏');
+        if (typeof initToolbar === 'function') {
+            initToolbar();
+        }
+    });
+});
 
 // 初始化缩放控制器
 function initZoomController() {
@@ -529,7 +560,7 @@ function addNode() {
     console.log('添加节点...');
     
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
@@ -546,11 +577,11 @@ function addNode() {
                     console.log('从ID获取到节点对象:', nodeObj.id);
                     selectedNode = nodeObj;
                 } else {
-                    alert('无法添加节点: 无法从ID获取节点对象');
+                    alert(window.i18n.t('node_add_error', '无法从ID获取节点对象'));
                     return;
                 }
             } else {
-                alert('无法添加节点: 选中节点没有有效ID');
+                alert(window.i18n.t('invalid_node_id'));
                 return;
             }
         }
@@ -569,12 +600,12 @@ function addNode() {
             // 尝试获取根节点作为备用
             const rootNode = jm.get_root();
             if (!rootNode) {
-                alert('无法添加节点: 找不到父节点且无法获取根节点');
+                alert(window.i18n.t('node_add_error', '找不到父节点且无法获取根节点'));
                 return;
             }
             
             // 提示用户选择是使用根节点还是取消操作
-            if (confirm('找不到当前选中的节点。是否要在根节点下添加新节点？')) {
+            if (confirm(window.i18n.t('root_switch_confirm'))) {
                 // 将选中节点更新为根节点
                 selectedNode = rootNode;
                 console.log('已切换到根节点:', rootNode.id);
@@ -587,7 +618,7 @@ function addNode() {
         // 使用最新的selectedNode重新获取父节点
         const actualParentNode = jm.get_node(selectedNode.id);
         if (!actualParentNode) {
-            alert('严重错误: 无法获取有效的父节点');
+            alert(window.i18n.t('node_add_error', '无法获取有效的父节点'));
             return;
         }
         
@@ -602,11 +633,11 @@ function addNode() {
         console.log('新节点ID:', newNodeId);
         
         // 使用正确的父节点对象添加节点
-        jm.add_node(actualParentNode, newNodeId, '新节点');
+        jm.add_node(actualParentNode, newNodeId, window.i18n.t('new_node'));
         console.log('节点添加成功');
     } catch (e) {
         console.error('添加节点失败:', e);
-        alert('添加节点失败: ' + e.message);
+        alert(window.i18n.t('node_add_error', e.message));
     }
 }
 
@@ -614,17 +645,17 @@ function editNode() {
     console.log('编辑节点...');
     
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
     try {
-        const newTopic = prompt('请输入新的节点内容:', selectedNode.topic);
+        const newTopic = prompt(window.i18n.t('edit_node'), selectedNode.topic);
         if (newTopic !== null) {
             // 检查节点ID是否有效
             if (!selectedNode.id || typeof selectedNode.id !== 'string') {
                 console.error('选中节点没有有效ID:', selectedNode);
-                alert('无法编辑节点: 选中节点没有有效ID');
+                alert(window.i18n.t('invalid_node_id'));
                 return;
             }
             
@@ -633,7 +664,7 @@ function editNode() {
         }
     } catch (e) {
         console.error('编辑节点失败:', e);
-        alert('编辑节点失败: ' + e.message);
+        alert(window.i18n.t('node_edit_error', e.message));
     }
 }
 
@@ -641,7 +672,7 @@ function deleteNode() {
     console.log('删除节点...');
     
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
@@ -649,17 +680,17 @@ function deleteNode() {
         // 检查节点ID是否有效
         if (!selectedNode.id || typeof selectedNode.id !== 'string') {
             console.error('选中节点没有有效ID:', selectedNode);
-            alert('无法删除节点: 选中节点没有有效ID');
+            alert(window.i18n.t('invalid_node_id'));
             return;
         }
         
         // 检查是否为根节点
         if (selectedNode.id === 'root') {
-            alert('不能删除根节点');
+            alert(window.i18n.t('cant_delete_root'));
             return;
         }
         
-        if (confirm('确定要删除此节点及其所有子节点吗？')) {
+        if (confirm(window.i18n.t('delete_confirm'))) {
             const nodeId = selectedNode.id;
             jm.remove_node(nodeId);
             selectedNode = null;
@@ -667,7 +698,7 @@ function deleteNode() {
         }
     } catch (e) {
         console.error('删除节点失败:', e);
-        alert('删除节点失败: ' + e.message);
+        alert(window.i18n.t('node_delete_error', e.message));
     }
 }
 
@@ -675,45 +706,45 @@ function deleteNode() {
 function openLatexEditor() {
     console.log('打开公式编辑器');
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
     if (typeof window.showLatexEditor === 'function') {
         window.showLatexEditor(selectedNode);
     } else {
-        alert('公式编辑器未就绪');
+        alert(window.i18n.t('formula_editor_not_ready'));
     }
 }
 
 // 关联线相关函数
 function startRelationLine() {
     if (!selectedNode) {
-        alert('请先选择一个起始节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
     relationStartNode = selectedNode;
-    alert(`已选择起始节点: "${relationStartNode.topic}"\n现在请选择目标节点`);
+    alert(window.i18n.t('relation_start_select', relationStartNode.topic));
 }
 
 // 摘要相关函数
 function openSummaryEditor() {
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
     console.log('打开摘要编辑器');
     const editor = document.getElementById('summary_editor');
     if (!editor) {
-        alert('摘要编辑器未找到');
+        alert(window.i18n.t('summary_editor_not_found'));
         return;
     }
     
     const summaryInput = document.getElementById('node_summary');
     if (!summaryInput) {
-        alert('摘要输入框未找到');
+        alert(window.i18n.t('summary_input_not_found'));
         return;
     }
     
@@ -728,19 +759,19 @@ function openSummaryEditor() {
 // 备注相关函数
 function openNoteEditor() {
     if (!selectedNode) {
-        alert('请先选择一个节点');
+        alert(window.i18n.t('select_node_first'));
         return;
     }
     
     const editor = document.getElementById('note_editor');
     if (!editor) {
-        alert('备注编辑器未找到');
+        alert(window.i18n.t('note_editor_not_found'));
         return;
     }
     
     const noteInput = document.getElementById('node_note');
     if (!noteInput) {
-        alert('备注输入框未找到');
+        alert(window.i18n.t('note_input_not_found'));
         return;
     }
     
@@ -774,7 +805,7 @@ function saveAsJson() {
         console.log('成功保存为JSON格式');
     } catch (e) {
         console.error('保存JSON失败:', e);
-        alert('保存失败: ' + e.message);
+        alert(window.i18n.t('save_success', 'JSON'));
     }
 }
 

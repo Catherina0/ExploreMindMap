@@ -30,11 +30,14 @@ window.onload = function() {
     // 初始化jsMind
     initJsMind();
     
-    // 延迟初始化其他组件，确保jsMind完全初始化
+    // // 立刻设置下拉菜单，因为它只依赖基础DOM (注释掉，因为initToolbar会重建它)
+    // setupDropdownMenus();
+
+    // 延迟初始化其他组件，确保jsMind完全初始化或处理依赖问题
     setTimeout(function() {
         console.log('初始化其他组件...');
         
-        // 初始化工具栏
+        // 初始化工具栏 (会重建工具栏DOM)
         console.log('调用initToolbar...', typeof initToolbar);
         if (typeof initToolbar === 'function') {
             try {
@@ -76,11 +79,16 @@ window.onload = function() {
             console.warn('initChat函数未定义');
         }
         
-        // 设置下拉菜单的智能定位
+        // 在initToolbar之后设置下拉菜单，因为它依赖于initToolbar创建的元素
         setupDropdownMenus();
         
+        // 确保i18n已经被应用到所有已经初始化的元素
+        if (window.i18n && typeof window.i18n.updateAllTexts === 'function') {
+            window.i18n.updateAllTexts();
+        }
+        
         console.log('应用初始化完成');
-    }, 500);
+    }, 1000); // 保持你设置的延迟
 };
 
 // 生成唯一ID
@@ -124,17 +132,22 @@ function initJsMind() {
             }
         };
         
+        // 获取适合当前语言的根节点名称
+        const rootNodeText = window.i18n && typeof window.i18n.t === 'function' ? 
+            window.i18n.t('root_node') : '根节点';
+        
         // 默认数据
         const defaultData = {
             meta: {
-                name: 'AI思维导图',
+                name: window.i18n && typeof window.i18n.t === 'function' ? 
+                    window.i18n.t('app_title') : 'AI思维导图',
                 author: 'AI助手',
                 version: '1.0'
             },
             format: 'node_tree',
             data: {
                 id: 'root',
-                topic: '根节点',
+                topic: rootNodeText,
                 direction: 'right',
                 expanded: true,
                 children: []
@@ -813,8 +826,7 @@ function setupDropdownMenus() {
     
     // 处理所有下拉菜单按钮
     const dropdownTriggers = {
-        'save': 'save_dropdown',
-        'load': 'load_dropdown'
+        'save': 'save_dropdown'
     };
     
     // 为每个下拉菜单添加点击处理
@@ -856,7 +868,8 @@ function setupDropdownMenus() {
     document.addEventListener('click', function(e) {
         Object.values(dropdownTriggers).forEach(id => {
             const dropdown = document.getElementById(id);
-            if (dropdown && !e.target.closest(`.btn-group`)) {
+            // 增加检查：确保 dropdown, e.target, e.target.closest 都有效
+            if (dropdown && e.target && typeof e.target.closest === 'function' && !e.target.closest(`.btn-group`)) {
                 dropdown.style.display = 'none';
             }
         });
@@ -896,3 +909,25 @@ function positionDropdown(trigger, dropdown) {
     
     console.log(`下拉菜单 ${dropdown.id} 已定位`);
 }
+
+// 监听语言变化事件
+document.addEventListener('languageChanged', (event) => {
+    console.log('语言已更改为:', event.detail.language);
+    
+    // 如果jsMind已经初始化，更新标题节点文本
+    if (jm) {
+        const rootNode = jm.get_root();
+        if (rootNode) {
+            rootNode.topic = window.i18n.t('root_node');
+            jm.update_node(rootNode);
+        }
+        
+        // 更新状态信息显示
+        updateStatusInfo();
+    }
+    
+    // 如果toolbar已经初始化，重新初始化以更新按钮文本
+    if (typeof initToolbar === 'function') {
+        initToolbar();
+    }
+});

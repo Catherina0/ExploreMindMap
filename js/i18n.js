@@ -271,6 +271,9 @@ function switchLanguage(lang) {
     console.log(`切换语言从 ${currentLang} 到 ${lang}`);
     currentLang = lang;
     
+    // 更新html元素的lang属性
+    document.documentElement.lang = lang;
+    
     // 保存语言设置到localStorage
     try {
         localStorage.setItem('preferred_language', lang);
@@ -363,6 +366,10 @@ function initI18n() {
             }
             console.log(`根据浏览器设置语言为: ${currentLang}`);
         }
+        
+        // 设置html元素的lang属性
+        document.documentElement.lang = currentLang;
+        
     } catch (e) {
         console.warn('无法获取语言偏好:', e);
     }

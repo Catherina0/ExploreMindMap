@@ -351,3 +351,64 @@ jmexpander:hover {
 .chat-hidden .mindmap-container {
     width: 100%;
 }
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap; /* 允许工具栏换行 */
+    gap: 5px;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 100;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+    margin-bottom: 5px; /* 增加底部间距以便于分行 */
+}
+
+/* 英文模式下的按钮样式调整 */
+html[lang="en"] .toolbar .btn {
+    font-size: 0.85rem; /* 英文模式下缩小字体 */
+    padding: 5px 8px; /* 调整内边距，使按钮更紧凑 */
+}
+
+/* 确保图标和文本对齐 */
+.toolbar .btn i {
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+/* 增加工具栏高度，以容纳两行 */
+.toolbar {
+    min-height: 80px; /* 足够容纳两行按钮 */
+}
+
+/* 按钮样式细化 */
+.toolbar .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 80px; /* 确保按钮有最小宽度 */
+}
+
+/* 工具栏行样式 */
+.toolbar-row {
+    display: flex;
+    width: 100%;
+    padding: 5px 0;
+    flex-wrap: wrap;
+}
+
+.toolbar-row + .toolbar-row {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid #eee;
+}

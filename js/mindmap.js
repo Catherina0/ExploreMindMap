@@ -27,6 +27,16 @@ function initToolbar() {
             window.i18n.t(key) : key;
     };
     
+    // 创建上层工具栏（文件操作）
+    const topRow = document.createElement('div');
+    topRow.className = 'toolbar-row';
+    toolbar.appendChild(topRow);
+    
+    // 创建下层工具栏（节点操作）
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'toolbar-row';
+    toolbar.appendChild(bottomRow);
+    
     // 定义按钮和分隔符创建函数
     const createButton = (id, textKey, titleKey, handler) => {
         const btn = document.createElement('button');
@@ -37,7 +47,30 @@ function initToolbar() {
         const text = translate(textKey);
         const title = translate(titleKey) || text;
         
-        btn.textContent = text;
+        // 添加图标
+        const iconMap = {
+            'add_node': 'fa-plus-circle',
+            'edit_node': 'fa-edit',
+            'delete_node': 'fa-trash-alt',
+            'expand_all': 'fa-expand-alt',
+            'collapse_all': 'fa-compress-alt',
+            'latex_button': 'fa-square-root-alt',
+            'note_button': 'fa-sticky-note',
+            'relation_button': 'fa-link',
+            'summary_button': 'fa-file-alt',
+            'save_map': 'fa-save',
+            'load_map': 'fa-folder-open'
+        };
+        
+        if (iconMap[id]) {
+            const icon = document.createElement('i');
+            icon.className = `fas ${iconMap[id]}`;
+            btn.appendChild(icon);
+            btn.innerHTML += ' ' + text; // 添加空格和文本
+        } else {
+            btn.textContent = text;
+        }
+        
         btn.title = title;
         
         // 保存原始key以便语言切换时更新
@@ -58,52 +91,14 @@ function initToolbar() {
         return separator;
     };
     
-    // 添加基本操作按钮
-    toolbar.appendChild(createButton('add_node', 'add_node', 'add_node', addNode));
-    toolbar.appendChild(createButton('edit_node', 'edit_node', 'edit_node', editNode));
-    toolbar.appendChild(createButton('delete_node', 'delete_node', 'delete_node', deleteNode));
-    toolbar.appendChild(createButton('expand_all', 'expand_all', 'expand_all', () => jm.expand_all()));
-    toolbar.appendChild(createButton('collapse_all', 'collapse_all', 'collapse_all', () => jm.collapse_all()));
+    // ===== 上层工具栏（文件操作） =====
     
-    // 添加主题选择器
-    const themeSelect = document.createElement('select');
-    themeSelect.id = 'theme_select';
-    themeSelect.title = translate('select_theme');
+    // 创建第一组按钮（文件操作）
+    const fileGroup = document.createElement('div');
+    fileGroup.className = 'toolbar-group';
+    topRow.appendChild(fileGroup);
     
-    const themes = [
-        {value: 'primary', textKey: 'blue_theme'},
-        {value: 'warning', textKey: 'yellow_theme'},
-        {value: 'danger', textKey: 'red_theme'},
-        {value: 'success', textKey: 'green_theme'}
-    ];
-    
-    themes.forEach(theme => {
-        const option = document.createElement('option');
-        option.value = theme.value;
-        option.textContent = translate(theme.textKey);
-        option.dataset.i18nText = theme.textKey; // 确保使用正确的属性名
-        themeSelect.appendChild(option);
-    });
-    
-    themeSelect.addEventListener('change', function() {
-        jm.set_theme(this.value);
-    });
-    
-    toolbar.appendChild(themeSelect);
-    
-    // 添加分隔符
-    toolbar.appendChild(createSeparator());
-    
-    // 添加高级功能按钮
-    toolbar.appendChild(createButton('latex_button', 'formula', 'formula', openLatexEditor));
-    toolbar.appendChild(createButton('note_button', 'note', 'note', openNoteEditor));
-    // toolbar.appendChild(createButton('relation_button', 'relation_line', 'relation_line', startRelationLine));
-    // toolbar.appendChild(createButton('summary_button', 'summary', 'summary', openSummaryEditor));
-    // 摘要和关联线功能暂时关掉 后面慢慢写
-    // 添加分隔符
-    toolbar.appendChild(createSeparator());
-    
-    // 创建保存按钮组（带下拉菜单）
+    // 添加保存按钮组（带下拉菜单）
     const saveGroup = document.createElement('div');
     saveGroup.className = 'btn-group';
     
@@ -149,7 +144,7 @@ function initToolbar() {
     // 组装保存按钮组
     saveGroup.appendChild(saveBtn);
     saveGroup.appendChild(saveDropdown);
-    toolbar.appendChild(saveGroup);
+    fileGroup.appendChild(saveGroup);
     
     // 加载按钮组
     const loadGroup = document.createElement('div');
@@ -197,7 +192,65 @@ function initToolbar() {
     // 组装加载按钮组
     loadGroup.appendChild(loadBtn);
     loadGroup.appendChild(loadDropdown);
-    toolbar.appendChild(loadGroup);
+    fileGroup.appendChild(loadGroup);
+    
+    // 添加主题选择器
+    const themeGroup = document.createElement('div');
+    themeGroup.className = 'toolbar-group';
+    topRow.appendChild(themeGroup);
+    
+    const themeSelect = document.createElement('select');
+    themeSelect.id = 'theme_select';
+    themeSelect.title = translate('select_theme');
+    
+    const themes = [
+        {value: 'primary', textKey: 'blue_theme'},
+        {value: 'warning', textKey: 'yellow_theme'},
+        {value: 'danger', textKey: 'red_theme'},
+        {value: 'success', textKey: 'green_theme'}
+    ];
+    
+    themes.forEach(theme => {
+        const option = document.createElement('option');
+        option.value = theme.value;
+        option.textContent = translate(theme.textKey);
+        option.dataset.i18nText = theme.textKey; // 确保使用正确的属性名
+        themeSelect.appendChild(option);
+    });
+    
+    themeSelect.addEventListener('change', function() {
+        jm.set_theme(this.value);
+    });
+    
+    themeGroup.appendChild(themeSelect);
+    
+    // ===== 下层工具栏（节点操作） =====
+    
+    // 创建节点操作按钮组
+    const nodeGroup = document.createElement('div');
+    nodeGroup.className = 'toolbar-group';
+    bottomRow.appendChild(nodeGroup);
+    
+    // 添加节点操作基本按钮
+    nodeGroup.appendChild(createButton('add_node', 'add_node', 'add_node', addNode));
+    nodeGroup.appendChild(createButton('edit_node', 'edit_node', 'edit_node', editNode));
+    nodeGroup.appendChild(createButton('delete_node', 'delete_node', 'delete_node', deleteNode));
+    nodeGroup.appendChild(createButton('expand_all', 'expand_all', 'expand_all', () => jm.expand_all()));
+    nodeGroup.appendChild(createButton('collapse_all', 'collapse_all', 'collapse_all', () => jm.collapse_all()));
+    
+    // 添加分隔符
+    bottomRow.appendChild(createSeparator());
+    
+    // 创建高级功能按钮组
+    const advancedGroup = document.createElement('div');
+    advancedGroup.className = 'toolbar-group';
+    bottomRow.appendChild(advancedGroup);
+    
+    // 添加高级功能按钮
+    advancedGroup.appendChild(createButton('latex_button', 'formula', 'formula', openLatexEditor));
+    advancedGroup.appendChild(createButton('note_button', 'note', 'note', openNoteEditor));
+    // advancedGroup.appendChild(createButton('relation_button', 'relation_line', 'relation_line', startRelationLine));
+    // advancedGroup.appendChild(createButton('summary_button', 'summary', 'summary', openSummaryEditor));
     
     // 点击文档关闭下拉菜单
     document.addEventListener('click', function(event) {

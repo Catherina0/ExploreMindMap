@@ -13,6 +13,19 @@ const MAX_CONTEXT_LENGTH = 10; // 最大上下文长度
 function initChat() {
     console.log('初始化聊天界面...');
     
+    // 确保aiAssistantEnabled变量已初始化（默认为关闭状态）
+    if (typeof aiAssistantEnabled === 'undefined') {
+        window.aiAssistantEnabled = false;
+        console.log('AI助手初始状态设置为: 关闭');
+    }
+    
+    // 初始化AI助手按钮状态
+    const aiToggleBtn = document.getElementById('ai_toggle');
+    if (aiToggleBtn) {
+        // 设置初始class
+        aiToggleBtn.classList.toggle('ai-enabled', aiAssistantEnabled);
+    }
+    
     // 初始绑定发送按钮
     document.getElementById('send_button').addEventListener('click', sendMessage);
     
@@ -64,103 +77,137 @@ function initChat() {
         chatMessages.innerHTML = '';
         
         // 添加欢迎消息
-        addMessage('ai', '您好！我是思维导图AI助手。选择一个节点并向我提问，我将帮助您扩展思维导图。');
+        const welcomeMessages = {
+            zh: '您好！我是思维导图AI助手。选择一个节点并向我提问，我将帮助您扩展思维导图。',
+            en: 'Hello! I am the Mind Map AI Assistant. Select a node and ask me questions, I will help you expand your mind map.'
+        };
+        const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+        addMessage('ai', welcomeMessages[currentLang] || welcomeMessages.zh);
     });
     
     // 绑定AI助手开关
     document.getElementById('ai_toggle').addEventListener('click', function() {
         toggleAIAssistant();
-        this.textContent = aiAssistantEnabled ? '关闭AI助手' : '开启AI助手';
-        this.style.backgroundColor = aiAssistantEnabled ? '#f44336' : '#4CAF50';
     });
     
     // 绑定toggle_chat按钮 - 显示/隐藏AI助手
     document.getElementById('toggle_chat').addEventListener('click', function() {
-        const appContainer = document.querySelector('.app-container');
-        appContainer.classList.toggle('chat-hidden');
-        
-        // 更新按钮文本
-        const buttonIcon = this.querySelector('i');
-        const buttonText = this.querySelector('span');
-        
-        if (appContainer.classList.contains('chat-hidden')) {
-            buttonText.textContent = '显示助手';
-            if (buttonIcon) buttonIcon.className = 'fas fa-eye';
-        } else {
-            buttonText.textContent = 'AI 助手';
-            if (buttonIcon) buttonIcon.className = 'fas fa-comments';
-        }
-        
-        // 调整思维导图大小
-        setTimeout(() => {
-            if (jm && typeof jm.resize === 'function') {
-                console.log('重新调整思维导图大小');
-                
-                // 强制重新计算画布尺寸
-                try {
-                    // 获取容器和工具栏
-                    const container = document.getElementById('jsmind_container');
-                    const zoomController = document.querySelector('.zoom-controller');
-                    
-                    if (!container) {
-                        console.warn('找不到jsmind容器');
-                        return;
-                    }
-                    
-                    const isVisible = !appContainer.classList.contains('chat-hidden');
-                    console.log('AI助手状态:', isVisible ? '显示' : '隐藏');
-                    
-                    // 调整思维导图容器宽度（新的平行布局结构不需要调整宽度）
-                    
-                    // 等待DOM更新完成后再计算画布尺寸
-                    setTimeout(() => {
-                        // 强制重新计算画布尺寸
-                        const w = container.clientWidth;
-                        const h = container.clientHeight;
-                        console.log(`画布新尺寸(更新后): ${w}x${h}`);
-                        
-                        // 调整大小
-                        jm.resize();
-                        
-                        // 应用新尺寸
-                        if (jm.view && typeof jm.view.size === 'function') {
-                            jm.view.size(w, h);
-                            console.log('已应用新尺寸到画布');
-                        }
-                        
-                        // 确保根节点始终居中显示，无论是否有选中节点
-                        console.log('重新居中根节点');
-                        if (jm.mind && jm.mind.root) {
-                            // 首先确保根节点在视图中居中
-                            jm.view.center_node(jm.mind.root);
-                            console.log('根节点已居中');
-                        }
-                        
-                        // 如果有选中节点，再居中到选中节点
-                        if (selectedNode && typeof jm.view.center_node === 'function') {
-                            jm.view.center_node(jm.get_node(selectedNode.id));
-                            console.log('选中节点已居中');
-                        }
-                        
-                        // 确保画布重新渲染以适应新宽度
-                        if (jm.view && typeof jm.view.expand_size === 'function') {
-                            jm.view.expand_size();
-                            console.log('扩展画布大小以适应新宽度');
-                        }
-                        
-                        // 刷新视图
-                        if (jm.view && typeof jm.view.show === 'function') {
-                            jm.view.show();
-                            console.log('刷新思维导图视图');
-                        }
-                    }, 50); // 短暂延时等待DOM更新
-                    
-                } catch (error) {
-                    console.error('调整画布大小失败:', error);
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) {
+            chatContainer.classList.toggle('show');
+            
+            // 改变按钮图标和文本
+            const toggleButton = document.getElementById('toggle_chat');
+            if (toggleButton) {
+                const isVisible = chatContainer.classList.contains('show');
+                toggleButton.querySelector('i').className = isVisible ? 'fas fa-times' : 'fas fa-comments';
+                if (toggleButton.querySelector('span')) {
+                    toggleButton.querySelector('span').textContent = isVisible ? '关闭助手' : 'AI助手';
                 }
             }
-        }, 300); // 等待过渡动画完成
+        }
     });
+    
+    // 监听语言变化事件，更新界面文本
+    document.addEventListener('languageChanged', () => {
+        updateChatInterfaceLanguage();
+    });
+    
+    // 初始化时设置界面语言
+    updateChatInterfaceLanguage();
+    
+    // 绑定toggle_chat按钮 - 显示/隐藏AI助手的替代实现
+    const toggleChatBtn = document.getElementById('toggle_chat');
+    if (toggleChatBtn && !toggleChatBtn._hasAlternateListener) {
+        toggleChatBtn._hasAlternateListener = true;
+        
+        toggleChatBtn.addEventListener('click', function() {
+            const appContainer = document.querySelector('.app-container');
+            appContainer.classList.toggle('chat-hidden');
+            
+            // 更新按钮文本
+            const buttonIcon = this.querySelector('i');
+            const buttonText = this.querySelector('span');
+            
+            if (appContainer.classList.contains('chat-hidden')) {
+                buttonText.textContent = '显示助手';
+                if (buttonIcon) buttonIcon.className = 'fas fa-eye';
+            } else {
+                buttonText.textContent = 'AI 助手';
+                if (buttonIcon) buttonIcon.className = 'fas fa-comments';
+            }
+            
+            // 调整思维导图大小
+            setTimeout(() => {
+                if (jm && typeof jm.resize === 'function') {
+                    console.log('重新调整思维导图大小');
+                    
+                    // 强制重新计算画布尺寸
+                    try {
+                        // 获取容器和工具栏
+                        const container = document.getElementById('jsmind_container');
+                        const zoomController = document.querySelector('.zoom-controller');
+                        
+                        if (!container) {
+                            console.warn('找不到jsmind容器');
+                            return;
+                        }
+                        
+                        const isVisible = !appContainer.classList.contains('chat-hidden');
+                        console.log('AI助手状态:', isVisible ? '显示' : '隐藏');
+                        
+                        // 调整思维导图容器宽度（新的平行布局结构不需要调整宽度）
+                        
+                        // 等待DOM更新完成后再计算画布尺寸
+                        setTimeout(() => {
+                            // 强制重新计算画布尺寸
+                            const w = container.clientWidth;
+                            const h = container.clientHeight;
+                            console.log(`画布新尺寸(更新后): ${w}x${h}`);
+                            
+                            // 调整大小
+                            jm.resize();
+                            
+                            // 应用新尺寸
+                            if (jm.view && typeof jm.view.size === 'function') {
+                                jm.view.size(w, h);
+                                console.log('已应用新尺寸到画布');
+                            }
+                            
+                            // 确保根节点始终居中显示，无论是否有选中节点
+                            console.log('重新居中根节点');
+                            if (jm.mind && jm.mind.root) {
+                                // 首先确保根节点在视图中居中
+                                jm.view.center_node(jm.mind.root);
+                                console.log('根节点已居中');
+                            }
+                            
+                            // 如果有选中节点，再居中到选中节点
+                            if (selectedNode && typeof jm.view.center_node === 'function') {
+                                jm.view.center_node(jm.get_node(selectedNode.id));
+                                console.log('选中节点已居中');
+                            }
+                            
+                            // 确保画布重新渲染以适应新宽度
+                            if (jm.view && typeof jm.view.expand_size === 'function') {
+                                jm.view.expand_size();
+                                console.log('扩展画布大小以适应新宽度');
+                            }
+                            
+                            // 刷新视图
+                            if (jm.view && typeof jm.view.show === 'function') {
+                                jm.view.show();
+                                console.log('刷新思维导图视图');
+                            }
+                        }, 50); // 短暂延时等待DOM更新
+                        
+                    } catch (error) {
+                        console.error('调整画布大小失败:', error);
+                    }
+                }
+            }, 300); // 等待过渡动画完成
+        });
+    }
     
     // 默认显示AI助手侧边栏
     const appContainer = document.querySelector('.app-container');
@@ -247,6 +294,61 @@ function initChat() {
     }, 500); // 等待界面完全加载
     
     console.log('聊天界面初始化完成 - AI助手默认显示');
+}
+
+// 更新聊天界面语言
+function updateChatInterfaceLanguage() {
+    // 确保aiAssistantEnabled已定义
+    if (typeof aiAssistantEnabled === 'undefined') {
+        window.aiAssistantEnabled = false;
+    }
+    
+    const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+    
+    // 如果对话历史为空，重新添加欢迎消息
+    if (!conversationHistory || conversationHistory.length === 0) {
+        const chatMessages = document.getElementById('chat_messages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+            
+            const welcomeMessages = {
+                zh: '您好！我是思维导图AI助手。选择一个节点并向我提问，我将帮助您扩展思维导图。',
+                en: 'Hello! I am the Mind Map AI Assistant. Select a node and ask me questions, I will help you expand your mind map.'
+            };
+            addMessage('ai', welcomeMessages[currentLang] || welcomeMessages.zh);
+        }
+    }
+    
+    // 更新AI助手开关按钮文本
+    const aiToggleBtn = document.getElementById('ai_toggle');
+    if (aiToggleBtn) {
+        const statusText = {
+            zh: {
+                on: 'AI助手 (开启)',
+                off: 'AI助手 (关闭)'
+            },
+            en: {
+                on: 'AI Assistant (ON)',
+                off: 'AI Assistant (OFF)'
+            }
+        };
+        
+        aiToggleBtn.textContent = aiAssistantEnabled ? 
+            statusText[currentLang].on : statusText[currentLang].off;
+        
+        // 使用class标记状态而不是直接设置颜色
+        aiToggleBtn.classList.toggle('ai-enabled', aiAssistantEnabled);
+    }
+    
+    // 更新toggle_chat按钮文本
+    const toggleChatBtn = document.getElementById('toggle_chat');
+    if (toggleChatBtn && toggleChatBtn.querySelector('span')) {
+        const chatContainer = document.querySelector('.chat-container');
+        const isVisible = chatContainer && chatContainer.classList.contains('show');
+        toggleChatBtn.querySelector('span').textContent = currentLang === 'en' ? 
+            (isVisible ? 'Close Assistant' : 'AI Assistant') : 
+            (isVisible ? '关闭助手' : 'AI助手');
+    }
 }
 
 // 发送消息
@@ -611,29 +713,56 @@ async function processAIRequest(query) {
         document.getElementById('loading').style.display = 'block';
         
         let prompt = '';
+        const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
         
         // 首次查询，获取完整思维导图结构
         if (isFirstQuery) {
             console.log('首次查询，添加思维导图结构信息');
-            prompt = `请协助我处理这个思维导图。思维导图结构如下：\n${getMindmapStructure()}\n\n`;
+            
+            // 中英文提示词模板
+            const promptTemplates = {
+                zh: {
+                    intro: `请协助我处理这个思维导图。思维导图结构如下：\n${getMindmapStructure()}\n\n`,
+                    selectedNode: `当前选中的节点是: "${selectedNode.topic}"\n`,
+                    path: `节点路径: {PATH}\n`,
+                    children: `子节点: {CHILDREN}\n`,
+                    question: `\n我的问题是: {QUERY}\n`
+                },
+                en: {
+                    intro: `Please help me with this mind map. The mind map structure is as follows:\n${getMindmapStructure()}\n\n`,
+                    selectedNode: `Currently selected node: "${selectedNode.topic}"\n`,
+                    path: `Node path: {PATH}\n`,
+                    children: `Child nodes: {CHILDREN}\n`,
+                    question: `\nMy question is: {QUERY}\n`
+                }
+            };
+            
+            // 获取当前语言的模板
+            const template = promptTemplates[currentLang] || promptTemplates.zh;
+            
+            // 构建提示词
+            prompt = template.intro;
             
             // 如果有选中的节点，添加节点信息
             if (selectedNode) {
-                prompt += `当前选中的节点是: "${selectedNode.topic}"\n`;
+                prompt += template.selectedNode;
                 
                 // 添加节点的路径信息
                 const path = getNodePath(selectedNode);
                 if (path.length > 0) {
-                    prompt += `节点路径: ${path.join(' > ')}\n`;
+                    prompt += template.path.replace('{PATH}', path.join(' > '));
                 }
                 
                 // 添加子节点信息
                 if (selectedNode.children && selectedNode.children.length > 0) {
-                    prompt += `子节点: ${selectedNode.children.map(child => `"${child.topic}"`).join(', ')}\n`;
+                    prompt += template.children.replace(
+                        '{CHILDREN}', 
+                        selectedNode.children.map(child => `"${child.topic}"`).join(', ')
+                    );
                 }
             }
             
-            prompt += `\n我的问题是: ${query}\n`;
+            prompt += template.question.replace('{QUERY}', query);
             isFirstQuery = false;
         } else {
             // 后续对话，直接传递用户问题
@@ -641,7 +770,11 @@ async function processAIRequest(query) {
             
             // 如果是新选中了节点，额外添加当前节点的信息
             if (selectedNode && selectedNode.topic) {
-                prompt = `当前我选中了节点"${selectedNode.topic}"。\n${query}`;
+                if (currentLang === 'en') {
+                    prompt = `I have selected the node "${selectedNode.topic}".\n${query}`;
+                } else {
+                    prompt = `当前我选中了节点"${selectedNode.topic}"。\n${query}`;
+                }
             }
         }
         
@@ -653,7 +786,8 @@ async function processAIRequest(query) {
         let messages = [];
         
         // 构建系统指令
-        const systemPrompt = `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
+        const systemPrompts = {
+            zh: `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
 
 在与用户的对话中，你可以：
 1. 回答用户关于任何主题的问题，提供信息和知识
@@ -676,14 +810,40 @@ async function processAIRequest(query) {
 ]
 
 如果用户没有请求修改思维导图，或者AI助手功能已关闭，就正常回答用户问题，不要提供上述JSON格式的修改建议。
-`;
+`,
+
+            en: `You are a powerful mind map assistant who can both help users expand and refine their mind maps, as well as provide normal conversational responses and knowledge.
+
+In your dialogue with users, you can:
+1. Answer questions on any topic, providing information and knowledge
+2. Engage in normal conversational exchanges
+3. Provide mind map modification suggestions only when the user explicitly requests modifications and the AI assistant feature is enabled
+
+When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. Please provide modification suggestions in the following format:
+[
+  {"action": "add_child", "topic": "First-level node content", "children": [
+    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 2 content", "children": [
+      {"topic": "Third-level node content"}
+    ]}
+  ]},
+  {"action": "update_current", "topic": "New content"},
+  {"action": "add_sibling", "topic": "Node content", "children": [
+    {"topic": "Child node content"}
+  ]},
+  {"action": "add_note", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
+]
+
+If the user does not request mind map modifications, or if the AI assistant feature is turned off, respond normally to the user's questions without providing the JSON format modification suggestions above.
+`
+        };
         
         // 根据不同的AI服务调整请求格式
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: systemPrompts[currentLang] },
                 ...conversationHistory
             ];
             
@@ -748,7 +908,7 @@ async function processAIRequest(query) {
             headers['api-key'] = cleanApiKey;
             
             messages = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: systemPrompts[currentLang] },
                 ...conversationHistory
             ];
             
@@ -805,7 +965,7 @@ async function processAIRequest(query) {
             headers['Authorization'] = `Bearer ${cleanApiKey}`;
             
             messages = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: systemPrompts[currentLang] },
                 ...conversationHistory
             ];
             
@@ -873,19 +1033,44 @@ function toggleAIAssistant() {
     aiAssistantEnabled = !aiAssistantEnabled;
     console.log('AI助手状态切换为:', aiAssistantEnabled ? '开启' : '关闭');
     
-    // 更新按钮样式
+    // 更新按钮样式 - 只更新文本和class，不直接设置颜色
     const toggleButton = document.getElementById('ai_toggle');
     if (toggleButton) {
+        const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+        const statusText = {
+            zh: {
+                on: 'AI助手 (开启)',
+                off: 'AI助手 (关闭)'
+            },
+            en: {
+                on: 'AI Assistant (ON)',
+                off: 'AI Assistant (OFF)'
+            }
+        };
+        
         toggleButton.textContent = aiAssistantEnabled ? 
-            window.i18n.t('ai_toggle') + ' (ON)' : 
-            window.i18n.t('ai_toggle') + ' (OFF)';
-        toggleButton.style.backgroundColor = aiAssistantEnabled ? '#f44336' : '#4CAF50';
+            statusText[currentLang].on : statusText[currentLang].off;
+            
+        // 使用class标记状态而不是直接设置颜色
+        toggleButton.classList.toggle('ai-enabled', aiAssistantEnabled);
     }
     
     // 显示状态变更消息
-    addMessage('ai', aiAssistantEnabled ? 
-        'AI助手已开启，将自动响应您选择的节点。' : 
-        'AI助手已关闭，只会响应您的直接提问。');
+    const statusMessages = {
+        zh: {
+            enabled: 'AI助手已开启，将自动响应您选择的节点。',
+            disabled: 'AI助手已关闭，只会响应您的直接提问。'
+        },
+        en: {
+            enabled: 'AI Assistant enabled. It will automatically respond to your selected nodes.',
+            disabled: 'AI Assistant disabled. It will only respond to your direct questions.'
+        }
+    };
+    
+    const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+    const messageKey = aiAssistantEnabled ? 'enabled' : 'disabled';
+    
+    addMessage('ai', statusMessages[currentLang][messageKey] || statusMessages.zh[messageKey]);
 }
 
 // 发送思维导图修改请求
@@ -927,7 +1112,11 @@ async function requestMindmapModification() {
     }
     
     // 获取当前对话的最后一条用户消息作为上下文
-    let latestUserQuery = "请帮我扩展当前选中的节点";
+    const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+    let latestUserQuery = currentLang === 'en' ? 
+        "Please help me expand the currently selected node" : 
+        "请帮我扩展当前选中的节点";
+        
     if (conversationHistory.length > 0) {
         for (let i = conversationHistory.length - 1; i >= 0; i--) {
             if (conversationHistory[i].role === 'user') {
@@ -938,7 +1127,9 @@ async function requestMindmapModification() {
     }
     
     // 构建特定的提示词，要求AI生成思维导图修改建议
-    const modificationPrompt = `请根据我的思维导图和当前选中的节点，提供详细的多层次修改建议。
+    // 中英文提示词模板
+    const modificationPrompts = {
+        zh: `请根据我的思维导图和当前选中的节点，提供详细的多层次修改建议。
 我的上一个问题是: "${latestUserQuery}"
 
 当前思维导图结构: ${getMindmapStructure()}
@@ -963,13 +1154,46 @@ async function requestMindmapModification() {
 对于注释内容，请尽可能详细和专业，提供丰富的背景信息、解释和案例。
 注释内容可以包含多个段落，可以适当排版。
 请尽量提供丰富详细的内容，包括多级节点结构和详细的备注说明。
-只回复上述JSON格式的修改建议，不要有其他文字说明。`;
+只回复上述JSON格式的修改建议，不要有其他文字说明。`,
+
+        en: `Based on my mind map and the currently selected node, please provide detailed multi-level modification suggestions.
+My last question was: "${latestUserQuery}"
+
+Current mind map structure: ${getMindmapStructure()}
+
+Currently selected node: "${selectedNode.topic}"
+
+Please provide modification suggestions in JSON format. You must create a multi-level node structure using the following format:
+[
+  {"action": "add_child", "topic": "First-level node content", "children": [
+    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 2 content", "children": [
+      {"topic": "Third-level node content"}
+    ]}
+  ]},
+  {"action": "update_current", "topic": "New content"},
+  {"action": "add_sibling", "topic": "Node content", "children": [
+    {"topic": "Child node content"}
+  ]},
+  {"action": "add_note", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
+]
+
+For the note content, please be as detailed and professional as possible, providing rich background information, explanations, and examples.
+Note content can include multiple paragraphs with appropriate formatting.
+Please provide rich and detailed content, including multi-level node structures and detailed notes.
+Only reply with the JSON format modification suggestions as specified above, without any other explanatory text.`
+    };
+    
+    const modificationPrompt = modificationPrompts[currentLang] || modificationPrompts.zh;
 
     // 在界面上显示加载状态
     document.getElementById('loading').style.display = 'block';
     
     // 添加用户请求消息
-    addMessage('user', '请根据我的需求和上下文内容修改思维导图');
+    const userRequestMessage = currentLang === 'en' ? 
+        'Please modify the mind map based on my needs and context' : 
+        '请根据我的需求和上下文内容修改思维导图';
+    addMessage('user', userRequestMessage);
     
     try {
         // 准备发送请求
@@ -978,27 +1202,63 @@ async function requestMindmapModification() {
         let headers = {'Content-Type': 'application/json'};
         let messages = [];
         
-        const systemPrompt = `你是一个专业的思维导图AI助手，专门帮助用户扩展和完善思维导图结构。
-你需要根据用户提供的当前思维导图结构和选中的节点，生成有针对性的修改建议。
-你必须创建多层次的节点结构，至少包含两层（子节点及其子节点），使思维导图更加丰富和详细。
+        const systemPrompts = {
+            zh: `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
 
-特别重要的是，你应该为关键节点添加详细的备注信息，这些备注必须包含：
-1. 概念的完整定义和解释
-2. 理论背景和历史发展
-3. 实际应用案例和示例
-4. 相关公式和模型的说明（如适用）
-5. 学术观点和争议（如适用）
-6. 进阶学习资源
+在与用户的对话中，你可以：
+1. 回答用户关于任何主题的问题，提供信息和知识
+2. 参与正常的对话交流
+3. 仅当用户明确要求修改思维导图并且AI助手功能开启时，才提供思维导图修改建议
 
-这些备注内容应当详尽且结构化，作为节点主题的补充材料，帮助用户深入理解概念。每个备注应当至少包含3-5段文本，确保信息全面且有深度。
+当用户请求修改思维导图时，你必须提供至少两层的节点结构（即子节点及其子节点），并为重要节点添加详细备注。请按以下格式提供修改建议：
+[
+  {"action": "添加子节点", "topic": "一级节点内容", "children": [
+    {"topic": "二级节点1内容"},
+    {"topic": "二级节点2内容", "children": [
+      {"topic": "三级节点内容"}
+    ]}
+  ]},
+  {"action": "修改当前节点", "topic": "新内容"},
+  {"action": "添加兄弟节点", "topic": "节点内容", "children": [
+    {"topic": "子节点内容"}
+  ]},
+  {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
+]
 
-修改建议必须以严格的JSON格式返回，不要有任何其他文字说明。`;
+如果用户没有请求修改思维导图，或者AI助手功能已关闭，就正常回答用户问题，不要提供上述JSON格式的修改建议。
+`,
+
+            en: `You are a powerful mind map assistant who can both help users expand and refine their mind maps, as well as provide normal conversational responses and knowledge.
+
+In your dialogue with users, you can:
+1. Answer questions on any topic, providing information and knowledge
+2. Engage in normal conversational exchanges
+3. Provide mind map modification suggestions only when the user explicitly requests modifications and the AI assistant feature is enabled
+
+When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. Please provide modification suggestions in the following format:
+[
+  {"action": "add_child", "topic": "First-level node content", "children": [
+    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 2 content", "children": [
+      {"topic": "Third-level node content"}
+    ]}
+  ]},
+  {"action": "update_current", "topic": "New content"},
+  {"action": "add_sibling", "topic": "Node content", "children": [
+    {"topic": "Child node content"}
+  ]},
+  {"action": "add_note", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
+]
+
+If the user does not request mind map modifications, or if the AI assistant feature is turned off, respond normally to the user's questions without providing the JSON format modification suggestions above.
+`
+        };
         
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: systemPrompts[currentLang] },
                 { role: 'user', content: modificationPrompt }
             ];
             
@@ -1047,7 +1307,7 @@ async function requestMindmapModification() {
             headers['Authorization'] = `Bearer ${apiKey}`;
             
             messages = [
-                { role: 'system', content: systemPrompt },
+                { role: 'system', content: systemPrompts[currentLang] },
                 { role: 'user', content: modificationPrompt }
             ];
             

@@ -856,7 +856,8 @@ function setupDropdownMenus() {
     
     // 处理所有下拉菜单按钮
     const dropdownTriggers = {
-        'save': 'save_dropdown'
+        'save_map': 'save_dropdown',
+        'load_map': 'load_dropdown'
     };
     
     // 为每个下拉菜单添加点击处理

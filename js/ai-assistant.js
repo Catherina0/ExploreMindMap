@@ -819,20 +819,25 @@ In your dialogue with users, you can:
 2. Engage in normal conversational exchanges
 3. Provide mind map modification suggestions only when the user explicitly requests modifications and the AI assistant feature is enabled
 
-When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. Please provide modification suggestions in the following format:
+When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. 
+
+IMPORTANT: Even though our conversation is in English, you must use the exact Chinese action names in your JSON responses as shown below:
 [
-  {"action": "add_child", "topic": "First-level node content", "children": [
+  {"action": "添加子节点", "topic": "First-level node content", "children": [
     {"topic": "Second-level node 1 content"},
     {"topic": "Second-level node 2 content", "children": [
       {"topic": "Third-level node content"}
     ]}
   ]},
-  {"action": "update_current", "topic": "New content"},
-  {"action": "add_sibling", "topic": "Node content", "children": [
+  {"action": "修改当前节点", "topic": "New content"},
+  {"action": "添加兄弟节点", "topic": "Node content", "children": [
     {"topic": "Child node content"}
   ]},
-  {"action": "add_note", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
+  {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
 ]
+
+The action names MUST be in Chinese exactly as shown above: "添加子节点", "修改当前节点", "添加兄弟节点", "添加注释". 
+The content can be in English, but the action names must be in Chinese.
 
 If the user does not request mind map modifications, or if the AI assistant feature is turned off, respond normally to the user's questions without providing the JSON format modification suggestions above.
 `
@@ -1235,20 +1240,25 @@ In your dialogue with users, you can:
 2. Engage in normal conversational exchanges
 3. Provide mind map modification suggestions only when the user explicitly requests modifications and the AI assistant feature is enabled
 
-When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. Please provide modification suggestions in the following format:
+When the user requests mind map modifications, you must provide at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes. 
+
+IMPORTANT: Even though our conversation is in English, you must use the exact Chinese action names in your JSON responses as shown below:
 [
-  {"action": "add_child", "topic": "First-level node content", "children": [
+  {"action": "添加子节点", "topic": "First-level node content", "children": [
     {"topic": "Second-level node 1 content"},
     {"topic": "Second-level node 2 content", "children": [
       {"topic": "Third-level node content"}
     ]}
   ]},
-  {"action": "update_current", "topic": "New content"},
-  {"action": "add_sibling", "topic": "Node content", "children": [
+  {"action": "修改当前节点", "topic": "New content"},
+  {"action": "添加兄弟节点", "topic": "Node content", "children": [
     {"topic": "Child node content"}
   ]},
-  {"action": "add_note", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
+  {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
 ]
+
+The action names MUST be in Chinese exactly as shown above: "添加子节点", "修改当前节点", "添加兄弟节点", "添加注释". 
+The content can be in English, but the action names must be in Chinese.
 
 If the user does not request mind map modifications, or if the AI assistant feature is turned off, respond normally to the user's questions without providing the JSON format modification suggestions above.
 `

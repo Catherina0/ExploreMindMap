@@ -440,3 +440,7 @@ html[lang="en"] .toolbar .btn {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
 }
+
+.azure-settings {
+    display: none;
+}

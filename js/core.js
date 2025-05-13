@@ -962,9 +962,13 @@ document.addEventListener('languageChanged', (event) => {
     // 如果toolbar已经初始化，重新初始化以更新按钮文本
     if (typeof initToolbar === 'function') {
         initToolbar();
-        // 因为 initToolbar 重建了DOM，需要重新设置下拉菜单的事件监听器
-        if (typeof setupDropdownMenus === 'function') {
-            setupDropdownMenus();
-        }
+        
+        // 关键修复：给系统一点时间完成DOM更新，然后重新设置下拉菜单
+        setTimeout(() => {
+            if (typeof setupDropdownMenus === 'function') {
+                console.log('语言切换后重新设置下拉菜单');
+                setupDropdownMenus();
+            }
+        }, 100);
     }
 });

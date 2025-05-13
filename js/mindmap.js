@@ -1077,7 +1077,115 @@ function importFromMarkdown() {
                 try {
                     const markdown = event.target.result;
                     const mindmapData = parseMDToMindmap(markdown);
+                    
+                    // 检查一下解析后的数据，特别是节点的备注信息
+                    console.log('即将导入思维导图数据:', mindmapData);
+                    
+                    if (typeof jm.show !== 'function') {
+                        console.error('jm.show 不是一个函数!');
+                        alert('jsMind实例未正确初始化，无法导入。');
+                        return;
+                    }
+                    
+                    // 手动遍历并为根节点的所有子节点(和子节点的子节点)附加data对象
+                    // 这是为了确保jsMind不会丢弃我们的data对象
+                    const ensureDataObjects = (nodes) => {
+                        if (!nodes) return;
+                        nodes.forEach(node => {
+                            if (!node.data) node.data = {};
+                            if (node.children) ensureDataObjects(node.children);
+                        });
+                    };
+                    
+                    ensureDataObjects(mindmapData.data.children);
+                    
+                    // 确保根节点也有data对象
+                    if (!mindmapData.data.data) mindmapData.data.data = {};
+                    
+                    // 显示思维导图
                     jm.show(mindmapData);
+                    
+                    // 导入成功后延迟半秒检查思维导图的备注数据
+                    setTimeout(function() {
+                        console.log('思维导图加载后检查数据:');
+                        if (jm.mind && jm.mind.nodes) {
+                            const nodes = jm.mind.nodes;
+                            let noteCount = 0;
+                            Object.values(nodes).forEach(node => {
+                                if (node.data && node.data.note) {
+                                    console.log(`节点 "${node.topic}" 保留了备注: "${node.data.note}"`);
+                                    noteCount++;
+                                }
+                            });
+                            console.log(`加载后找到 ${noteCount} 个带备注的节点`);
+                            
+                            // 手动更新节点数据
+                            if (noteCount === 0) {
+                                console.log('尝试手动重新附加备注数据...');
+                                // 查找并附加丢失的备注
+                                const reattachNotes = (originalNodes, currentNodes) => {
+                                    const findOriginalNode = (id, topic, nodes) => {
+                                        for (const node of nodes) {
+                                            if ((node.id === id || node.topic === topic) && node.data && node.data.note) {
+                                                return node;
+                                            }
+                                            if (node.children && node.children.length > 0) {
+                                                const found = findOriginalNode(id, topic, node.children);
+                                                if (found) return found;
+                                            }
+                                        }
+                                        return null;
+                                    };
+                                    
+                                    Object.values(currentNodes).forEach(node => {
+                                        // 在原始数据中查找对应节点
+                                        const originalNode = findOriginalNode(node.id, node.topic, originalNodes);
+                                        if (originalNode && originalNode.data && originalNode.data.note) {
+                                            // 重新附加备注
+                                            if (!node.data) node.data = {};
+                                            node.data.note = originalNode.data.note;
+                                            console.log(`手动为节点 "${node.topic}" 附加备注: "${originalNode.data.note}"`);
+                                            
+                                            // 强制更新节点
+                                            jm.update_node(node.id, node.topic, node.data);
+                                        }
+                                    });
+                                };
+                                
+                                // 递归查找原始思维导图数据中所有节点
+                                const getAllNodes = (root) => {
+                                    const result = [];
+                                    const traverse = (node) => {
+                                        result.push(node);
+                                        if (node.children) {
+                                            node.children.forEach(traverse);
+                                        }
+                                    };
+                                    traverse(root);
+                                    return result;
+                                };
+                                
+                                // 获取原始数据中所有节点
+                                const originalNodes = getAllNodes(mindmapData.data);
+                                
+                                // 为当前思维导图中的节点重新附加备注
+                                reattachNotes(originalNodes, jm.mind.nodes);
+                            }
+                        }
+                    }, 500);
+                    
+                    // 导入成功后渲染所有备注标记
+                    setTimeout(function() {
+                        console.log('导入完成，开始渲染备注标记');
+                        if (typeof renderAllNoteMarkers === 'function') {
+                            renderAllNoteMarkers();
+                        } else if (typeof window.renderAllNoteMarkers === 'function') {
+                            window.renderAllNoteMarkers();
+                        } else {
+                            console.warn('找不到renderAllNoteMarkers函数，无法渲染备注标记');
+                        }
+                    }, 1000); // 给jsMind一点时间完成节点渲染和数据附加
+                    
                     console.log('从Markdown导入成功');
                 } catch (err) {
                     console.error('解析Markdown失败:', err);
@@ -1097,6 +1205,8 @@ function importFromMarkdown() {
 
 // 解析Markdown为思维导图数据结构
 function parseMDToMindmap(markdown) {
+    console.log('开始解析Markdown文件');
+    
     // 分割为行
     const lines = markdown.split('\n');
     let rootId = 'root';
@@ -1130,15 +1240,19 @@ function parseMDToMindmap(markdown) {
     let currentLevel = 0;
     let stack = [{ node: mindmapData.data, level: -1 }];
     let nodeIdCounter = 0;
-    let currentNote = null;
+    let lastNodeIndex = -1; // 用于跟踪最后处理的节点行的索引
     
+    // 先收集所有节点行，再处理备注
+    let nodeLines = []; // 存储 {index, level, node} 的数组
+    
+    // 第一遍：收集所有节点行
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         
         // 跳过标题行
         if (line.startsWith('#')) continue;
         
-        // 处理列表项
+        // 处理列表项（节点）
         if (line.startsWith('-') || line.startsWith('*')) {
             // 计算当前行的缩进级别
             const leadingSpace = lines[i].search(/[^\s]/);
@@ -1157,7 +1271,8 @@ function parseMDToMindmap(markdown) {
             const newNode = {
                 "id": `md_node_${++nodeIdCounter}`,
                 "topic": content,
-                "children": []
+                "children": [],
+                "data": {} // 确保每个节点都有一个data对象
             };
             
             // 将新节点添加到父节点的子节点列表中
@@ -1165,42 +1280,105 @@ function parseMDToMindmap(markdown) {
             
             // 将新节点推入堆栈
             stack.push({ node: newNode, level: level });
-            currentNote = null;
+            lastNodeIndex = i;
+            
+            // 存储节点信息以便后续处理备注
+            nodeLines.push({
+                index: i,
+                level: level,
+                node: newNode
+            });
         }
+    }
+    
+    // 第二遍：处理备注
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
         // 处理注释（以>开头的行）
-        else if (line.startsWith('>') && stack.length > 1) {
-            let noteText = line.replace(/^>/, '').trim(); // 获取移除'>'并修剪后的原始内容
-
-            const appSpecificPrefix = "*注释: "; // 程序添加的特定前缀，包含星号和空格
-            const appSpecificSuffix = "*";       // 程序添加的特定后缀星号
-
-            // 检查是否符合程序导出的特定格式 "*注释: CONTENT*"
-            if (noteText.toLowerCase().startsWith(appSpecificPrefix.toLowerCase()) &&
-                noteText.endsWith(appSpecificSuffix) &&
-                noteText.length >= (appSpecificPrefix.length + appSpecificSuffix.length)) {
-                // 如果是，则提取前缀和后缀之间的内容
-                noteText = noteText.substring(
-                    appSpecificPrefix.length,
-                    noteText.length - appSpecificSuffix.length
-                ).trim();
-            }
-            // 如果不符合上述特定格式 (例如 "> 用户自己的*强调文本*" 或 "> 普通文本")
-            // noteText 将保持为移除'>'并修剪后的原始内容，以保留用户自定义的Markdown
-
-            const currentNode = stack[stack.length - 1].node;
+        if (line.startsWith('>')) {
+            // 找到此备注行对应的节点
+            let targetNode = null;
+            let closestNodeIndex = -1;
+            let closestNodeLevel = -1;
             
-            if (!currentNode.data) {
-                currentNode.data = {};
+            // 找到此备注行之前的最近节点
+            for (let j = nodeLines.length - 1; j >= 0; j--) {
+                const nodeLine = nodeLines[j];
+                
+                // 备注行之前的节点
+                if (nodeLine.index < i) {
+                    // 找与备注行缩进最接近的父节点
+                    const noteLeadingSpace = lines[i].search(/[^\s]/);
+                    const noteLevel = Math.floor(noteLeadingSpace / 2);
+                    
+                    // 节点比备注多缩进一级，或缩进相同
+                    if (nodeLine.level >= noteLevel - 1) {
+                        if (closestNodeIndex === -1 || 
+                            nodeLine.index > closestNodeIndex || 
+                            (nodeLine.index === closestNodeIndex && nodeLine.level > closestNodeLevel)) {
+                            closestNodeIndex = nodeLine.index;
+                            closestNodeLevel = nodeLine.level;
+                            targetNode = nodeLine.node;
+                        }
+                    }
+                }
             }
             
-            if (!currentNode.data.note) {
-                currentNode.data.note = noteText;
+            // 如果找到目标节点，处理备注
+            if (targetNode) {
+                let noteText = line.replace(/^>/, '').trim(); // 获取移除'>'并修剪后的原始内容
+                
+                const appSpecificPrefix = "*注释: "; // 程序添加的特定前缀，包含星号和空格
+                const appSpecificSuffix = "*";       // 程序添加的特定后缀星号
+                
+                // 检查是否符合程序导出的特定格式 "*注释: CONTENT*"
+                if (noteText.toLowerCase().startsWith(appSpecificPrefix.toLowerCase()) &&
+                    noteText.endsWith(appSpecificSuffix) &&
+                    noteText.length >= (appSpecificPrefix.length + appSpecificSuffix.length)) {
+                    // 如果是，则提取前缀和后缀之间的内容
+                    noteText = noteText.substring(
+                        appSpecificPrefix.length,
+                        noteText.length - appSpecificSuffix.length
+                    ).trim();
+                }
+                
+                // 确保节点的data对象已初始化
+                if (!targetNode.data) {
+                    targetNode.data = {};
+                }
+                
+                // 附加备注到节点
+                targetNode.data.note = noteText;
+                
+                console.log(`已将备注 "${noteText}" 添加到节点 "${targetNode.topic}"`, targetNode);
             } else {
-                currentNode.data.note += '\n' + noteText;
+                console.warn(`找不到备注行 "${line}" 对应的节点`);
             }
         }
     }
     
+    // 打印所有带备注的节点，用于调试
+    let notesCount = 0;
+    const checkNodesWithNotes = (nodes) => {
+        nodes.forEach(node => {
+            if (node.data && node.data.note) {
+                console.log(`节点 "${node.topic}" 有备注: "${node.data.note}"`);
+                notesCount++;
+            }
+            if (node.children && node.children.length > 0) {
+                checkNodesWithNotes(node.children);
+            }
+        });
+    };
+    
+    console.log('检查解析后的节点备注:');
+    if (mindmapData.data.children && mindmapData.data.children.length > 0) {
+        checkNodesWithNotes(mindmapData.data.children);
+    }
+    console.log(`找到 ${notesCount} 个带备注的节点`);
+    
+    console.log('Markdown解析完成，节点数量:', nodeLines.length);
     return mindmapData;
 }
 
@@ -1229,10 +1407,19 @@ function renderAllNoteMarkers() {
         
         console.log(`开始处理${Object.keys(nodes).length}个节点...`);
         
+        // 先检查一下节点数据，输出调试信息
+        Object.values(nodes).forEach((node, index) => {
+            console.log(`检查节点 #${index+1}: ID=${node.id}, 主题=${node.topic}, 有data对象=${!!node.data}, 有备注=${!!(node.data && node.data.note)}`);
+            if (node.data && node.data.note) {
+                console.log(`- 备注内容: "${node.data.note}"`);
+            }
+        });
+        
         // 遍历所有节点
         Object.values(nodes).forEach((node, index) => {
-            if (node && node.data && node.data.note) {
-                console.log(`处理第${index+1}个节点: ${node.id} (${node.topic})`);
+            // 更严格的检查: 节点必须有data对象且data.note必须存在且不为空字符串
+            if (node && node.data && node.data.note && node.data.note.trim() !== '') {
+                console.log(`处理第${index+1}个节点: ${node.id} (${node.topic}), 备注: "${node.data.note}"`);
                 addNoteMarker(node);
                 noteCount++;
             }

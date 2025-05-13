@@ -950,15 +950,21 @@ document.addEventListener('languageChanged', (event) => {
         const rootNode = jm.get_root();
         if (rootNode) {
             rootNode.topic = window.i18n.t('root_node');
-            jm.update_node(rootNode);
+            jm.update_node(rootNode.id, rootNode.topic); // 建议使用ID和topic更新
         }
         
         // 更新状态信息显示
-        updateStatusInfo();
+        if (typeof updateStatusInfo === 'function') { // 确保函数存在
+            updateStatusInfo();
+        }
     }
     
     // 如果toolbar已经初始化，重新初始化以更新按钮文本
     if (typeof initToolbar === 'function') {
         initToolbar();
+        // 因为 initToolbar 重建了DOM，需要重新设置下拉菜单的事件监听器
+        if (typeof setupDropdownMenus === 'function') {
+            setupDropdownMenus();
+        }
     }
 });

@@ -206,11 +206,6 @@ function initToolbar() {
     
     // 主保存按钮
     const saveBtn = createButton('save_map', 'save_mindmap', 'save_mindmap');
-    saveBtn.onclick = function() {
-        // 切换下拉菜单的显示状态
-        const dropdown = document.getElementById('save_dropdown');
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    };
     
     // 下拉菜单
     const saveDropdown = document.createElement('div');
@@ -254,11 +249,6 @@ function initToolbar() {
     
     // 加载按钮
     const loadBtn = createButton('load_map', 'load_mindmap', 'load_mindmap');
-    loadBtn.onclick = function() {
-        // 切换下拉菜单的显示状态
-        const dropdown = document.getElementById('load_dropdown');
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-    };
     
     // 下拉菜单
     const loadDropdown = document.createElement('div');

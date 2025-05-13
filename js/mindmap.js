@@ -1039,7 +1039,15 @@ function generateMarkdownFromNodes(nodes, level) {
         
         // 添加节点备注（如果有）
         if (node.data && node.data.note) {
-            markdown += `${indent}  > *注释: ${node.data.note.replace(/\n/g, '\n' + indent + '  > ')}*\n`;
+            let noteContent = node.data.note;
+            
+            // 尝试移除备注数据中可能已存在的 "*注释:" 前缀
+            const prefixRegex = /^\s*\*?\s*注释:\s*/;
+            noteContent = noteContent.replace(prefixRegex, '');
+            
+            // 正确处理多行备注的缩进
+            const processedNote = noteContent.replace(/\n/g, `\n${indent}  > `);
+            markdown += `${indent}  > *注释: ${processedNote}*\n`;
         }
         
         // 递归处理子节点
@@ -1161,7 +1169,24 @@ function parseMDToMindmap(markdown) {
         }
         // 处理注释（以>开头的行）
         else if (line.startsWith('>') && stack.length > 1) {
-            const noteText = line.replace(/^>/, '').trim();
+            let noteText = line.replace(/^>/, '').trim(); // 获取移除'>'并修剪后的原始内容
+
+            const appSpecificPrefix = "*注释: "; // 程序添加的特定前缀，包含星号和空格
+            const appSpecificSuffix = "*";       // 程序添加的特定后缀星号
+
+            // 检查是否符合程序导出的特定格式 "*注释: CONTENT*"
+            if (noteText.toLowerCase().startsWith(appSpecificPrefix.toLowerCase()) &&
+                noteText.endsWith(appSpecificSuffix) &&
+                noteText.length >= (appSpecificPrefix.length + appSpecificSuffix.length)) {
+                // 如果是，则提取前缀和后缀之间的内容
+                noteText = noteText.substring(
+                    appSpecificPrefix.length,
+                    noteText.length - appSpecificSuffix.length
+                ).trim();
+            }
+            // 如果不符合上述特定格式 (例如 "> 用户自己的*强调文本*" 或 "> 普通文本")
+            // noteText 将保持为移除'>'并修剪后的原始内容，以保留用户自定义的Markdown
+
             const currentNode = stack[stack.length - 1].node;
             
             if (!currentNode.data) {

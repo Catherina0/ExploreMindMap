@@ -118,7 +118,14 @@ const translations = {
         // 语言切换
         'language': '语言',
         'language_zh': '中文',
-        'language_en': '英文'
+        'language_en': '英文',
+        
+        // 新增翻译字符串
+        'new_mindmap_confirm': '确定要创建新的思维导图吗？当前未保存的内容将丢失。',
+        'new_mindmap_created': '新思维导图已创建',
+        'new_mindmap_error': '创建失败: {0}',
+        'generating_image': '正在生成图片...',
+        'image_export_error': '导出图片失败: {0}'
     },
     en: {
         // Common UI elements
@@ -232,7 +239,14 @@ const translations = {
         // Language switching
         'language': 'Language',
         'language_zh': 'Chinese',
-        'language_en': 'English'
+        'language_en': 'English',
+        
+        // 新增翻译字符串
+        'new_mindmap_confirm': 'Are you sure you want to create a new mind map? Unsaved changes will be lost.',
+        'new_mindmap_created': 'New mind map created',
+        'new_mindmap_error': 'Creation failed: {0}',
+        'generating_image': 'Generating image...',
+        'image_export_error': 'Failed to export image: {0}'
     }
 };
 

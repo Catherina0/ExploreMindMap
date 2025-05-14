@@ -122,6 +122,7 @@ function initToolbar() {
         
         // 添加图标
         const iconMap = {
+            'new_mindmap': 'fa-file', // 新建思维导图的图标
             'add_node': 'fa-plus-circle',
             'edit_node': 'fa-edit',
             'delete_node': 'fa-trash-alt',
@@ -132,7 +133,8 @@ function initToolbar() {
             'relation_button': 'fa-link',
             'summary_button': 'fa-file-alt',
             'save_map': 'fa-save',
-            'load_map': 'fa-folder-open'
+            'load_map': 'fa-folder-open',
+            'capture': 'fa-camera', 
         };
         
         // 创建图标和文本容器
@@ -199,8 +201,74 @@ function initToolbar() {
     const fileGroup = document.createElement('div');
     fileGroup.className = 'toolbar-group';
     topRow.appendChild(fileGroup);
+
+    // {{ 新增 "新建思维导图" 按钮 }}
+    fileGroup.appendChild(createButton('new_mindmap', 'new_mindmap', 'new_mindmap', createNewMindmap));
+    function createNewMindmap() {
+        console.log('创建新的思维导图...');
+        
+        // 询问用户是否确定要创建新图（会丢失当前未保存的内容）
+        if (jm && confirm(window.i18n && typeof window.i18n.t === 'function' ? 
+                window.i18n.t('new_mindmap_confirm') : '确定要创建新的思维导图吗？当前未保存的内容将丢失。')) {
+            
+            try {
+                // 获取适合当前语言的根节点名称
+                const rootNodeText = window.i18n && typeof window.i18n.t === 'function' ? 
+                    window.i18n.t('root_node') : '根节点';
+                
+                // 创建新的思维导图数据
+                const newMindmapData = {
+                    meta: {
+                        name: window.i18n && typeof window.i18n.t === 'function' ? 
+                            window.i18n.t('app_title') : 'AI思维导图',
+                        author: 'AI助手',
+                        version: '1.0'
+                    },
+                    format: 'node_tree',
+                    data: {
+                        id: 'root',
+                        topic: rootNodeText,
+                        direction: 'right',
+                        expanded: true,
+                        children: []
+                    }
+                };
+                
+                // 显示新的思维导图
+                jm.show(newMindmapData);
+                
+                // 重置全局状态
+                selectedNode = null;
+                nodeIdCounter = 0;  // 重置节点ID计数器
+                
+                // 确保根节点居中显示
+                if (jm.view) {
+                    setTimeout(() => {
+                        jm.view.center_node(jm.get_root());
+                    }, 100);
+                }
+                
+                console.log('已创建新的思维导图');
+                
+                // 可选：提示用户创建成功
+                // alert(window.i18n.t('new_mindmap_created', '新思维导图已创建'));
+                
+                return true;
+            } catch (error) {
+                console.error('创建新思维导图失败:', error);
+                alert(window.i18n && typeof window.i18n.t === 'function' ? 
+                    window.i18n.t('new_mindmap_error', '创建失败: ' + error.message) : 
+                    '创建失败: ' + error.message);
+                return false;
+            }
+        } else {
+            console.log('用户取消了创建新思维导图');
+            return false;
+        }
+    }
+
+        // {{ 结束新增区域 }}
     
-    // 添加保存按钮组（带下拉菜单）
     const saveGroup = document.createElement('div');
     saveGroup.className = 'btn-group';
     
@@ -285,6 +353,9 @@ function initToolbar() {
     loadGroup.appendChild(loadBtn);
     loadGroup.appendChild(loadDropdown);
     fileGroup.appendChild(loadGroup);
+    
+    // 添加导出为图片按钮
+    fileGroup.appendChild(createButton('capture', 'save_as_image', 'save_as_image', exportAsImage));
     
     // 添加主题选择器
     const themeGroup = document.createElement('div');
@@ -509,80 +580,6 @@ function addNoteMarker(node) {
             this.style.transform = 'scale(1)';
         });
         
-        // 创建悬浮提示框
-        const tooltip = document.createElement('div');
-        tooltip.className = 'note-tooltip';
-        
-        // 添加标题行
-        const titleRow = document.createElement('div');
-        titleRow.style.borderBottom = '1px solid #eaeaea';
-        titleRow.style.padding = '0 0 6px 0';
-        titleRow.style.marginBottom = '8px';
-        titleRow.style.fontWeight = 'bold';
-        titleRow.style.color = '#333';
-        titleRow.textContent = node.topic || '节点备注';
-        tooltip.appendChild(titleRow);
-        
-        // 添加备注内容
-        const contentDiv = document.createElement('div');
-        contentDiv.textContent = node.data.note;
-        tooltip.appendChild(contentDiv);
-        
-        tooltip.dataset.nodeId = node.id;
-        
-        // 设置tooltip样式
-        Object.assign(tooltip.style, {
-            position: 'absolute',
-            zIndex: '1000',
-            backgroundColor: '#fff',
-            border: '1px solid #ddd',
-            borderRadius: '6px',
-            padding: '10px 14px',
-            boxShadow: '0 3px 12px rgba(0,0,0,0.15)',
-            maxWidth: '350px',
-            maxHeight: '250px',
-            overflow: 'auto',
-            display: 'none',
-            whiteSpace: 'pre-wrap',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            color: '#333',
-            cursor: 'default',
-            pointerEvents: 'auto',
-            userSelect: 'text'
-        });
-
-        // 用于跟踪鼠标位置的变量
-        let isTooltipHovered = false;
-        let isIndicatorHovered = false;
-        let isNodeHovered = false;
-        
-        // 显示提示框函数
-        function showTooltip() {
-            // 获取节点位置
-            const rect = nodeElement.getBoundingClientRect();
-            
-            // 设置提示框位置 - 在节点右侧
-            const topPosition = rect.top + window.scrollY;
-            const leftPosition = rect.right + window.scrollX + 10; // 10px的间距
-            
-            // 应用位置
-            tooltip.style.top = `${topPosition}px`;
-            tooltip.style.left = `${leftPosition}px`;
-            
-            // 显示提示框
-            tooltip.style.display = 'block';
-            tooltip.style.opacity = '0';
-            tooltip.style.transform = 'translateY(-5px)';
-            
-            // 稍微延迟后添加过渡效果
-            setTimeout(() => {
-                tooltip.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-                tooltip.style.opacity = '1';
-                tooltip.style.transform = 'translateY(0)';
-            }, 10);
-        }
-        
         // 鼠标悬停时显示提示框 - 备注图标
         noteIndicator.addEventListener('mouseover', function(e) {
             isIndicatorHovered = true;
@@ -678,7 +675,7 @@ function addNoteMarker(node) {
     }
 }
 
-// 导出函数到全局作用域供其他模块使用
+// 导出函数到全局作用域
 window.renderAllNoteMarkers = renderAllNoteMarkers;
 window.updateRelationLines = updateRelationLines;
 window.initToolbar = initToolbar;
@@ -686,6 +683,8 @@ window.initZoomController = initZoomController;
 window.importFromMarkdown = importFromMarkdown;
 window.exportToMarkdown = exportToMarkdown;
 window.addNoteMarker = addNoteMarker;
+window.createNewMindmap = createNewMindmap;
+window.exportAsImage = exportAsImage;
 
 // 更新缩放级别
 function updateZoom() {
@@ -1434,4 +1433,419 @@ function renderAllNoteMarkers() {
 // 更新所有关联线位置
 function updateRelationLines() {
     console.log('更新关联线位置');
+}
+
+// 导出为图片功能
+function exportAsImage() {
+    console.log('开始导出为图片...');
+    
+    if (!jm || !jm.mind) {
+        alert(window.i18n && typeof window.i18n.t === 'function' ? 
+            window.i18n.t('mindmap_not_loaded') : '思维导图数据尚未加载');
+        return;
+    }
+    
+    try {
+        // 获取思维导图容器
+        const container = document.getElementById('jsmind_container');
+        if (!container) {
+            throw new Error('找不到思维导图容器');
+        }
+        
+        // 显示加载指示器
+        const loadingIndicator = document.getElementById('loading');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.textContent = window.i18n && typeof window.i18n.t === 'function' ? 
+                window.i18n.t('generating_image') : '正在生成图片...';
+        }
+        
+        // 使用html2canvas捕获思维导图
+        if (typeof html2canvas !== 'function') {
+            // 如果html2canvas未加载，提示用户
+            console.warn('html2canvas库未加载，尝试动态加载...');
+            
+            // 尝试动态加载html2canvas
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+            script.onload = function() {
+                console.log('html2canvas加载成功，重试导出');
+                captureImage();
+            };
+            script.onerror = function() {
+                // 隐藏加载指示器
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+                alert('无法加载html2canvas库，请检查网络连接');
+            };
+            document.head.appendChild(script);
+            return;
+        } else {
+            captureImage();
+        }
+        
+        // 捕获图片的函数
+        function captureImage() {
+            try {
+                // 记录原始滚动位置和缩放比例
+                const originalScrollLeft = container.scrollLeft;
+                const originalScrollTop = container.scrollTop;
+                const originalScale = zoomLevel / 100; // 从百分比转为小数
+                
+                // 临时隐藏工具栏和不需要的UI元素
+                const toolbar = document.getElementById('toolbar');
+                const zoomController = document.getElementById('zoom_controller');
+                let toolbarDisplay = 'block';
+                let zoomDisplay = 'flex';
+                
+                if (toolbar) {
+                    toolbarDisplay = toolbar.style.display;
+                    toolbar.style.display = 'none';
+                }
+                
+                if (zoomController) {
+                    zoomDisplay = zoomController.style.display;
+                    zoomController.style.display = 'none';
+                }
+                
+                // 临时隐藏所有提示窗和弹出元素
+                const tooltips = document.querySelectorAll('.note-tooltip, .context-menu, .dropdown-content');
+                const tooltipDisplays = [];
+                tooltips.forEach(tooltip => {
+                    tooltipDisplays.push(tooltip.style.display);
+                    tooltip.style.display = 'none';
+                });
+                
+                // 获取思维导图的主画布元素
+                const mainView = container.querySelector('.jsmind-inner');
+                if (!mainView) {
+                    throw new Error('找不到思维导图画布元素');
+                }
+                
+                // 确保在导出前展开所有节点
+                if (jm && jm.view && typeof jm.expand_all === 'function') {
+                    jm.expand_all();
+                    console.log('已展开所有节点');
+                }
+                
+                // 延迟100ms确保所有节点完全渲染
+                setTimeout(() => {
+                    try {
+                        // 计算思维导图内容的实际边界
+                        let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+                        
+                        // 尝试获取jsMind内部的画布尺寸（如果可用）
+                        let canvasWidth, canvasHeight;
+                        let useJsMindSize = false;
+                        
+                        if (jm && jm.view && jm.view.size) {
+                            try {
+                                // 如果jsMind提供了size API，直接使用它的尺寸
+                                const jmSize = jm.view.size;
+                                console.log(`jsMind报告的尺寸: width=${jmSize.width}, height=${jmSize.height}`);
+                                
+                                if (jmSize.width > 50 && jmSize.height > 50) {
+                                    canvasWidth = jmSize.width;
+                                    canvasHeight = jmSize.height;
+                                    useJsMindSize = true;
+                                    console.log(`使用jsMind的原始尺寸: ${canvasWidth}x${canvasHeight}`);
+                                }
+                            } catch (e) {
+                                console.warn('无法获取jsMind尺寸:', e);
+                            }
+                        }
+                        
+                        if (!useJsMindSize) {
+                            // 先获取容器和内部视图的尺寸作为参考
+                            const containerRect = container.getBoundingClientRect();
+                            const mainViewRect = mainView.getBoundingClientRect();
+                            
+                            console.log(`容器尺寸: ${containerRect.width}x${containerRect.height}`);
+                            console.log(`内部视图尺寸: ${mainViewRect.width}x${mainViewRect.height}`);
+                            
+                            // 获取所有节点和连接线，更详细地分析边界
+                            const nodes = mainView.querySelectorAll('jmnode');
+                            const expanders = mainView.querySelectorAll('jmexpander');
+                            const paths = mainView.querySelectorAll('path');
+                            
+                            console.log(`找到 ${nodes.length} 个节点, ${expanders.length} 个展开器, ${paths.length} 条连接线`);
+                            
+                            // 检查是否有足够的元素
+                            if (nodes.length === 0) {
+                                throw new Error('找不到思维导图节点元素');
+                            }
+                            
+                            // 更精确地计算节点边界
+                            nodes.forEach(node => {
+                                const rect = node.getBoundingClientRect();
+                                minX = Math.min(minX, rect.left);
+                                minY = Math.min(minY, rect.top);
+                                maxX = Math.max(maxX, rect.right);
+                                maxY = Math.max(maxY, rect.bottom);
+                            });
+                            
+                            // 考虑展开器的边界
+                            expanders.forEach(expander => {
+                                const rect = expander.getBoundingClientRect();
+                                minX = Math.min(minX, rect.left);
+                                minY = Math.min(minY, rect.top);
+                                maxX = Math.max(maxX, rect.right);
+                                maxY = Math.max(maxY, rect.bottom);
+                            });
+                            
+                            // 处理SVG连接线的边界
+                            paths.forEach(path => {
+                                try {
+                                    if (path.getBBox) {
+                                        const box = path.getBBox();
+                                        const svgRect = path.ownerSVGElement.getBoundingClientRect();
+                                        
+                                        const pathLeft = svgRect.left + box.x;
+                                        const pathTop = svgRect.top + box.y;
+                                        const pathRight = pathLeft + box.width;
+                                        const pathBottom = pathTop + box.height;
+                                        
+                                        minX = Math.min(minX, pathLeft);
+                                        minY = Math.min(minY, pathTop);
+                                        maxX = Math.max(maxX, pathRight);
+                                        maxY = Math.max(maxY, pathBottom);
+                                    } else {
+                                        const rect = path.getBoundingClientRect();
+                                        minX = Math.min(minX, rect.left);
+                                        minY = Math.min(minY, rect.top);
+                                        maxX = Math.max(maxX, rect.right);
+                                        maxY = Math.max(maxY, rect.bottom);
+                                    }
+                                } catch (e) {
+                                    console.warn('计算路径边界时出错:', e);
+                                }
+                            });
+                            
+                            // 添加额外的检查 - 遍历所有内部元素
+                            const allInnerElements = mainView.querySelectorAll('*');
+                            allInnerElements.forEach(element => {
+                                try {
+                                    const rect = element.getBoundingClientRect();
+                                    // 只考虑可见且有实际尺寸的元素
+                                    if (rect.width > 0 && rect.height > 0) {
+                                        minX = Math.min(minX, rect.left);
+                                        minY = Math.min(minY, rect.top);
+                                        maxX = Math.max(maxX, rect.right);
+                                        maxY = Math.max(maxY, rect.bottom);
+                                    }
+                                } catch (e) {
+                                    // 忽略边界计算错误
+                                }
+                            });
+                            
+                            // 检查是否成功找到边界并记录
+                            if (minX === Infinity || minY === Infinity || maxX === 0 || maxY === 0) {
+                                console.warn('无法正确计算思维导图边界，将使用内部视图');
+                                
+                                // 使用内部视图的边界作为备用
+                                minX = mainViewRect.left;
+                                minY = mainViewRect.top;
+                                maxX = mainViewRect.right;
+                                maxY = mainViewRect.bottom;
+                            }
+                            
+                            console.log(`计算得到的边界: [${minX}, ${minY}] - [${maxX}, ${maxY}]`);
+                            console.log(`内容尺寸: ${maxX - minX}x${maxY - minY}`);
+                            
+                            // 添加大边距确保内容不被裁剪
+                            const padding = 150; // 增加边距确保内容不被裁剪
+                            
+                            // 计算画布大小并添加额外的安全缩放
+                            const contentWidth = maxX - minX;
+                            const contentHeight = maxY - minY;
+                            
+                            // 使用更大的尺寸以确保包含所有内容
+                            canvasWidth = contentWidth + (padding * 2);
+                            canvasHeight = contentHeight + (padding * 2);
+                            
+                            // 如果内容尺寸明显小于容器，尝试使用更大的值
+                            if (contentWidth < mainViewRect.width * 0.8 || contentHeight < mainViewRect.height * 0.8) {
+                                console.log('内容尺寸明显小于视图尺寸，扩大画布');
+                                canvasWidth = Math.max(canvasWidth, mainViewRect.width + padding);
+                                canvasHeight = Math.max(canvasHeight, mainViewRect.height + padding);
+                            }
+                            
+                            // 添加额外的安全因子
+                            const safetyFactor = 1.2; // 增加20%的额外空间
+                            canvasWidth = Math.ceil(canvasWidth * safetyFactor);
+                            canvasHeight = Math.ceil(canvasHeight * safetyFactor);
+                        }
+                        
+                        console.log(`最终画布尺寸: ${canvasWidth}x${canvasHeight}`);
+                        
+                        // 使用html2canvas捕获思维导图
+                        html2canvas(container, {
+                            backgroundColor: '#FFFFFF',
+                            scale: 2, // 提高图片质量
+                            useCORS: true, // 允许跨域图片
+                            allowTaint: true, // 允许包含跨域元素
+                            logging: true, // 启用日志帮助调试
+                            imageTimeout: 0, // 禁用图像超时
+                            removeContainer: false, // 不移除临时容器以避免问题
+                            ignoreElements: (element) => {
+                                // 忽略所有提示窗和不需要的UI元素
+                                return element.classList && (
+                                    element.classList.contains('note-tooltip') ||
+                                    element.classList.contains('context-menu') ||
+                                    element.classList.contains('dropdown-content') ||
+                                    element.id === 'toolbar' ||
+                                    element.id === 'zoom_controller' ||
+                                    element.id === 'loading'
+                                );
+                            },
+                            onclone: (documentClone, element) => {
+                                // 克隆文档后，对克隆进行额外处理
+                                try {
+                                    // 找到克隆文档中的主容器
+                                    const clonedContainer = documentClone.getElementById('jsmind_container');
+                                    if (clonedContainer) {
+                                        // 确保克隆容器可以显示完整内容
+                                        clonedContainer.style.width = canvasWidth + 'px';
+                                        clonedContainer.style.height = canvasHeight + 'px';
+                                        clonedContainer.style.overflow = 'visible';
+                                        
+                                        // 移除可能限制大小的样式
+                                        clonedContainer.style.maxWidth = 'none';
+                                        clonedContainer.style.maxHeight = 'none';
+                                        
+                                        // 查找内部视图并设置样式
+                                        const clonedInnerView = clonedContainer.querySelector('.jsmind-inner');
+                                        if (clonedInnerView) {
+                                            clonedInnerView.style.width = canvasWidth + 'px';
+                                            clonedInnerView.style.height = canvasHeight + 'px';
+                                            clonedInnerView.style.overflow = 'visible';
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('处理克隆文档时出错:', e);
+                                }
+                                return documentClone;
+                            },
+                            // 使用宽松的尺寸设置，让html2canvas自动处理 
+                            width: canvasWidth,
+                            height: canvasHeight
+                        }).then(function(canvas) {
+                            // 恢复UI元素显示状态
+                            if (toolbar) {
+                                toolbar.style.display = toolbarDisplay;
+                            }
+                            if (zoomController) {
+                                zoomController.style.display = zoomDisplay;
+                            }
+                            
+                            // 恢复提示窗显示状态
+                            tooltips.forEach((tooltip, index) => {
+                                tooltip.style.display = tooltipDisplays[index];
+                            });
+                            
+                            // 恢复原始滚动位置
+                            container.scrollLeft = originalScrollLeft;
+                            container.scrollTop = originalScrollTop;
+                            
+                            // 转换为图片并下载
+                            try {
+                                const imgData = canvas.toDataURL('image/png');
+                                const link = document.createElement('a');
+                                
+                                // 设置文件名
+                                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                                const fileName = 'mindmap-' + timestamp + '.png';
+                                
+                                link.download = fileName;
+                                link.href = imgData;
+                                link.click();
+                                
+                                console.log('成功导出为图片');
+                            } catch (err) {
+                                console.error('导出图片时出错:', err);
+                                alert(window.i18n && typeof window.i18n.t === 'function' ? 
+                                    window.i18n.t('image_export_error', err.message) : 
+                                    '导出图片失败: ' + err.message);
+                            }
+                            
+                            // 隐藏加载指示器
+                            if (loadingIndicator) {
+                                loadingIndicator.style.display = 'none';
+                            }
+                        }).catch(function(error) {
+                            console.error('生成图片时出错:', error);
+                            
+                            // 恢复UI元素显示状态
+                            if (toolbar) {
+                                toolbar.style.display = toolbarDisplay;
+                            }
+                            if (zoomController) {
+                                zoomController.style.display = zoomDisplay;
+                            }
+                            
+                            // 恢复提示窗显示状态
+                            tooltips.forEach((tooltip, index) => {
+                                tooltip.style.display = tooltipDisplays[index];
+                            });
+                            
+                            // 隐藏加载指示器
+                            if (loadingIndicator) {
+                                loadingIndicator.style.display = 'none';
+                            }
+                            
+                            alert(window.i18n && typeof window.i18n.t === 'function' ? 
+                                window.i18n.t('image_export_error', error.message) : 
+                                '导出图片失败: ' + error.message);
+                        });
+                    } catch (delayedError) {
+                        console.error('延迟处理过程中出错:', delayedError);
+                        
+                        // 恢复UI元素显示状态
+                        if (toolbar) {
+                            toolbar.style.display = toolbarDisplay;
+                        }
+                        if (zoomController) {
+                            zoomController.style.display = zoomDisplay;
+                        }
+                        
+                        // 恢复提示窗显示状态
+                        tooltips.forEach((tooltip, index) => {
+                            tooltip.style.display = tooltipDisplays[index];
+                        });
+                        
+                        // 隐藏加载指示器
+                        if (loadingIndicator) {
+                            loadingIndicator.style.display = 'none';
+                        }
+                        
+                        alert(window.i18n && typeof window.i18n.t === 'function' ? 
+                            window.i18n.t('image_export_error', delayedError.message) : 
+                            '导出图片失败: ' + delayedError.message);
+                    }
+                }, 100); // 延迟100ms确保所有节点都完全渲染
+                
+            } catch (e) {
+                // 隐藏加载指示器
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+                
+                console.error('捕获图片时出错:', e);
+                alert(window.i18n && typeof window.i18n.t === 'function' ? 
+                    window.i18n.t('image_export_error', e.message) : 
+                    '导出图片失败: ' + e.message);
+            }
+        }
+    } catch (e) {
+        // 隐藏加载指示器
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        
+        console.error('导出图片失败:', e);
+        alert(window.i18n && typeof window.i18n.t === 'function' ? 
+            window.i18n.t('image_export_error', e.message) : 
+            '导出图片失败: ' + e.message);
+    }
 }

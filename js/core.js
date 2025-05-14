@@ -319,7 +319,14 @@ function initJsMind() {
                         // 单击且节点有备注，显示备注
                         if (selectedNode.data && selectedNode.data.note) {
                             console.log('节点有备注，显示备注');
-                            showNodeNote(selectedNode);
+                            // 使用浮动窗口显示备注
+                            if (typeof showFloatingNoteWindow === 'function') {
+                                showFloatingNoteWindow(selectedNode);
+                            } else if (typeof window.showFloatingNoteWindow === 'function') {
+                                window.showFloatingNoteWindow(selectedNode);
+                            } else {
+                                console.warn('找不到showFloatingNoteWindow函数，无法显示备注');
+                            }
                         }
                     }
                     selectedNode._lastClickTime = now;
@@ -617,155 +624,6 @@ function setupNodeMonitor() {
     };
 }
 
-// 显示节点备注的函数
-function showNodeNote(node) {
-    console.log('显示节点备注 - 开始处理:', node.id, node.topic);
-    console.log('备注内容长度:', node.data?.note?.length || 0);
-    
-    if (!node || !node.data || !node.data.note) {
-        console.warn('节点没有备注内容');
-        return;
-    }
-    
-    // 首先移除任何现有的备注悬浮窗
-    const existingPopups = document.querySelectorAll('.node-note-popup');
-    if (existingPopups.length > 0) {
-        console.log(`移除${existingPopups.length}个现有备注弹窗`);
-        existingPopups.forEach(popup => popup.remove());
-    }
-    
-    // 获取节点DOM元素
-    const nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
-    if (!nodeElement) {
-        console.error('找不到节点DOM元素:', node.id);
-        return;
-    }
-    
-    console.log('创建备注弹窗');
-    
-    // 创建备注悬浮窗
-    const popup = document.createElement('div');
-    popup.className = 'node-note-popup';
-    
-    // 添加标题
-    const title = document.createElement('div');
-    title.style.fontWeight = 'bold';
-    title.style.marginBottom = '8px';
-    title.style.borderBottom = '1px solid #eee';
-    title.style.paddingBottom = '5px';
-    title.textContent = '节点备注：';
-    popup.appendChild(title);
-    
-    // 添加备注内容
-    const content = document.createElement('div');
-    content.textContent = node.data.note;
-    content.style.maxHeight = '250px';
-    content.style.overflow = 'auto';
-    popup.appendChild(content);
-    
-    // 添加关闭按钮
-    const closeBtn = document.createElement('span');
-    closeBtn.textContent = '×';
-    closeBtn.className = 'close-btn';
-    Object.assign(closeBtn.style, {
-        position: 'absolute',
-        top: '5px',
-        right: '8px',
-        cursor: 'pointer',
-        fontSize: '18px',
-        fontWeight: 'bold',
-        color: '#888'
-    });
-    closeBtn.addEventListener('click', (e) => {
-        console.log('点击关闭按钮');
-        e.stopPropagation(); // 防止点击事件冒泡
-        popup.remove();
-    });
-    popup.appendChild(closeBtn);
-    
-    // 将弹窗添加到body
-    document.body.appendChild(popup);
-    console.log('备注弹窗已添加到DOM');
-    
-    // 定位弹窗到节点下方
-    const nodeRect = nodeElement.getBoundingClientRect();
-    popup.style.left = `${nodeRect.left}px`;
-    popup.style.top = `${nodeRect.bottom + 10}px`;
-    
-    console.log(`弹窗初始位置: left=${nodeRect.left}px, top=${nodeRect.bottom + 10}px`);
-    
-    // 检查弹窗是否在视口范围内，如果不在则调整位置
-    setTimeout(() => {
-        const popupRect = popup.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        console.log(`弹窗尺寸: width=${popupRect.width}px, height=${popupRect.height}px`);
-        console.log(`视口尺寸: width=${viewportWidth}px, height=${viewportHeight}px`);
-        
-        let positionChanged = false;
-        
-        // 水平调整
-        if (popupRect.right > viewportWidth) {
-            const newLeft = Math.max(0, viewportWidth - popupRect.width - 10);
-            console.log(`水平调整: ${popup.style.left} -> ${newLeft}px`);
-            popup.style.left = `${newLeft}px`;
-            positionChanged = true;
-        }
-        
-        // 垂直调整
-        if (popupRect.bottom > viewportHeight) {
-            // 如果下方空间不足，显示在节点上方
-            if (nodeRect.top > popupRect.height + 10) {
-                const newTop = nodeRect.top - popupRect.height - 10;
-                console.log(`垂直调整(上方): ${popup.style.top} -> ${newTop}px`);
-                popup.style.top = `${newTop}px`;
-                
-                // 调整箭头位置
-                const arrow = popup.querySelector('::before');
-                if (arrow) {
-                    arrow.style.top = 'auto';
-                    arrow.style.bottom = '-6px';
-                    arrow.style.borderBottom = 'none';
-                    arrow.style.borderTop = '1px solid #ddd';
-                    arrow.style.borderRight = '1px solid #ddd';
-                }
-            } else {
-                // 如果上方也不足，调整最大高度
-                const availableHeight = Math.max(200, viewportHeight - nodeRect.bottom - 20);
-                console.log(`垂直调整(限高): maxHeight=${availableHeight}px`);
-                popup.style.maxHeight = `${availableHeight}px`;
-                content.style.maxHeight = `${availableHeight - 60}px`;  // 减去标题和内边距
-            }
-            positionChanged = true;
-        }
-        
-        if (positionChanged) {
-            console.log('已调整弹窗位置以适应视口');
-        } else {
-            console.log('弹窗位置无需调整');
-        }
-    }, 0);
-    
-    // 添加点击事件监听，点击其他地方时关闭弹窗
-    const closePopupOnClick = (e) => {
-        if (!popup.contains(e.target) && !nodeElement.contains(e.target)) {
-            console.log('点击外部区域，关闭弹窗');
-            popup.remove();
-            document.removeEventListener('click', closePopupOnClick);
-        }
-    };
-    
-    // 延迟添加事件监听，避免立即触发
-    setTimeout(() => {
-        document.addEventListener('click', closePopupOnClick);
-        console.log('已添加文档点击监听器');
-    }, 100);
-    
-    console.log('备注弹窗创建完成');
-    return popup;
-}
-
 // 获取节点的子节点信息
 function getChildrenInfo(node) {
     if (!node || !node.children || node.children.length === 0) {
@@ -826,7 +684,6 @@ function addNodeNote(nodeId, noteText) {
 
 // 导出功能到全局作用域
 window.addNodeNote = addNodeNote;
-window.showNodeNote = showNodeNote;
 
 // 在index.html中修改现有的错误处理代码
 window.addEventListener('error', function(e) {

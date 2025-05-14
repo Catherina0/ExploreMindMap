@@ -519,6 +519,11 @@ function addNoteMarker(node) {
         
         console.log('成功找到节点DOM元素:', node.id);
         
+        // 为整个节点添加title属性，以便在鼠标悬停时显示备注内容预览
+        const notePreview = node.data.note.length > 50 ? 
+            node.data.note.substring(0, 50) + '...' : node.data.note;
+        nodeElement.setAttribute('title', `备注: ${notePreview}`);
+        
         // 检查是否已有标记
         if (nodeElement.querySelector('.note-indicator')) {
             console.log('节点已有备注标记，跳过');
@@ -569,7 +574,7 @@ function addNoteMarker(node) {
             </svg>
         `;
         
-        // 鼠标悬停效果
+        // 悬停在图标上时改变样式
         noteIndicator.addEventListener('mouseover', function() {
             this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
             this.style.transform = 'scale(1.1)';
@@ -580,94 +585,21 @@ function addNoteMarker(node) {
             this.style.transform = 'scale(1)';
         });
         
-        // 鼠标悬停时显示提示框 - 备注图标
-        noteIndicator.addEventListener('mouseover', function(e) {
-            isIndicatorHovered = true;
-            showTooltip();
-        });
-        
-        // 鼠标移出图标
-        noteIndicator.addEventListener('mouseout', function(e) {
-            isIndicatorHovered = false;
-            // 延迟隐藏，给用户时间将鼠标移动到提示框上
-            setTimeout(() => {
-                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
-                    hideTooltip();
-                }
-            }, 50);
-        });
-        
-        // 鼠标悬停时显示提示框 - 整个节点
-        nodeElement.addEventListener('mouseover', function(e) {
-            // 如果鼠标悬停在备注图标上，不做处理（避免重复）
-            if (e.target === noteIndicator || noteIndicator.contains(e.target)) {
-                return;
-            }
-            isNodeHovered = true;
-            showTooltip();
-        });
-        
-        // 鼠标移出节点
-        nodeElement.addEventListener('mouseout', function(e) {
-            // 确保鼠标真的离开了节点，而不是移到节点的子元素上
-            // relatedTarget 是鼠标移到的目标元素
-            if (this.contains(e.relatedTarget)) {
-                return;
-            }
-            isNodeHovered = false;
-            // 延迟隐藏，给用户时间将鼠标移动到提示框上
-            setTimeout(() => {
-                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
-                    hideTooltip();
-                }
-            }, 50);
-        });
-        
-        // 鼠标移入提示框
-        tooltip.addEventListener('mouseover', function() {
-            isTooltipHovered = true;
-        });
-        
-        // 鼠标移出提示框
-        tooltip.addEventListener('mouseout', function(e) {
-            // 确保鼠标真的离开了提示框，而不是移到提示框的子元素上
-            if (this.contains(e.relatedTarget)) {
-                return;
-            }
-            isTooltipHovered = false;
-            // 延迟隐藏，避免闪烁
-            setTimeout(() => {
-                if (!isTooltipHovered && !isIndicatorHovered && !isNodeHovered) {
-                    hideTooltip();
-                }
-            }, 50);
-        });
-        
-        // 隐藏提示框函数
-        function hideTooltip() {
-            tooltip.style.opacity = '0';
-            tooltip.style.transform = 'translateY(-5px)';
+        // 点击备注图标时显示备注 - 使用core.js中的showNodeNote函数
+        noteIndicator.addEventListener('click', function(e) {
+            e.stopPropagation(); // 防止触发节点选择事件
             
-            // 等待过渡效果完成后隐藏
-            setTimeout(() => {
-                tooltip.style.display = 'none';
-            }, 200);
-        }
-        
-        // 将提示框添加到body
-        document.body.appendChild(tooltip);
+            // 确保节点已被选中
+            if (selectedNode?.id !== node.id) {
+                selectedNode = node;
+            }
+            
+            // 调用显示悬浮窗口函数
+            showFloatingNoteWindow(node);
+        });
         
         // 将指示器添加到节点内容后
         topicElement.appendChild(noteIndicator);
-        
-        // 添加小动画提示用户
-        noteIndicator.style.transform = 'scale(0.8)';
-        setTimeout(() => {
-            noteIndicator.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                noteIndicator.style.transform = 'scale(1)';
-            }, 200);
-        }, 10);
         
         console.log('备注标记添加成功');
     } catch (e) {
@@ -685,6 +617,7 @@ window.exportToMarkdown = exportToMarkdown;
 window.addNoteMarker = addNoteMarker;
 window.createNewMindmap = createNewMindmap;
 window.exportAsImage = exportAsImage;
+window.showFloatingNoteWindow = showFloatingNoteWindow;
 
 // 更新缩放级别
 function updateZoom() {
@@ -1410,21 +1343,95 @@ function renderAllNoteMarkers() {
         Object.values(nodes).forEach((node, index) => {
             console.log(`检查节点 #${index+1}: ID=${node.id}, 主题=${node.topic}, 有data对象=${!!node.data}, 有备注=${!!(node.data && node.data.note)}`);
             if (node.data && node.data.note) {
-                console.log(`- 备注内容: "${node.data.note}"`);
+                const notePreview = typeof node.data.note === 'string' ? 
+                    (node.data.note.length > 30 ? node.data.note.substring(0, 30) + '...' : node.data.note) : 
+                    '(非字符串内容)';
+                console.log(`- 备注内容: "${notePreview}"`);
             }
         });
         
-        // 遍历所有节点
+        // 临时信息：打印环境信息
+        console.log('浏览器环境:', navigator.userAgent);
+        console.log('窗口尺寸:', window.innerWidth, 'x', window.innerHeight);
+        
+        // 遍历所有节点，增加更强的错误处理
         Object.values(nodes).forEach((node, index) => {
-            // 更严格的检查: 节点必须有data对象且data.note必须存在且不为空字符串
-            if (node && node.data && node.data.note && node.data.note.trim() !== '') {
-                console.log(`处理第${index+1}个节点: ${node.id} (${node.topic}), 备注: "${node.data.note}"`);
-                addNoteMarker(node);
-                noteCount++;
+            try {
+                // 更严格的检查: 节点必须有data对象且data.note必须存在且不为空字符串
+                if (node && node.id) {
+                    // 确保节点有data对象
+                    if (!node.data) {
+                        node.data = {};
+                    }
+                    
+                    // 首先检查是否有备注
+                    if (node.data.note) {
+                        // 确保备注是字符串
+                        if (typeof node.data.note !== 'string') {
+                            console.warn(`节点 ${node.id} 的备注不是字符串类型, 尝试转换`);
+                            node.data.note = String(node.data.note);
+                        }
+                        
+                        // 确保备注不为空
+                        if (node.data.note.trim() !== '') {
+                            console.log(`处理第${index+1}个节点: ${node.id} (${node.topic}), 备注长度: ${node.data.note.length}`);
+                            
+                            // 尝试添加备注标记，并捕获可能的错误
+                            try {
+                                addNoteMarker(node);
+                                noteCount++;
+                            } catch (markerError) {
+                                console.error(`为节点 ${node.id} 添加备注标记时出错:`, markerError);
+                            }
+                        } else {
+                            console.log(`节点 ${node.id} 的备注内容为空，跳过添加标记`);
+                        }
+                    }
+                } else {
+                    console.warn(`跳过无效节点 #${index+1}:`, node);
+                }
+            } catch (nodeError) {
+                console.error(`处理节点 #${index+1} 时出错:`, nodeError);
             }
         });
+        
+        // 检查节点DOM元素
+        const nodeElements = document.querySelectorAll('jmnode');
+        console.log(`找到 ${nodeElements.length} 个节点DOM元素`);
         
         console.log(`所有备注标记已渲染，共添加了${noteCount}个备注图标`);
+        
+        // 如果没有添加任何备注图标，但存在有备注的节点，进行一次额外检查
+        if (noteCount === 0) {
+            console.warn('没有添加任何备注图标，但可能存在有备注的节点，执行额外检查...');
+            
+            // 延迟执行，给DOM渲染一些时间
+            setTimeout(() => {
+                try {
+                    let manualNoteCount = 0;
+                    Object.values(nodes).forEach((node, index) => {
+                        if (node && node.data && node.data.note && typeof node.data.note === 'string' && node.data.note.trim() !== '') {
+                            // 手动查找节点DOM元素
+                            const nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
+                            if (nodeElement) {
+                                console.log(`找到节点 ${node.id} 的DOM元素，手动添加备注标记`);
+                                try {
+                                    addNoteMarker(node);
+                                    manualNoteCount++;
+                                } catch (e) {
+                                    console.error(`手动添加备注标记失败:`, e);
+                                }
+                            } else {
+                                console.warn(`找不到节点 ${node.id} 的DOM元素`);
+                            }
+                        }
+                    });
+                    console.log(`额外检查完成，手动添加了 ${manualNoteCount} 个备注图标`);
+                } catch (e) {
+                    console.error('额外检查过程中出错:', e);
+                }
+            }, 500);
+        }
     } catch (e) {
         console.error('渲染备注标记失败:', e);
     }
@@ -1848,4 +1855,172 @@ function exportAsImage() {
             window.i18n.t('image_export_error', e.message) : 
             '导出图片失败: ' + e.message);
     }
+}
+
+// 显示悬浮在画布上方的备注窗口
+function showFloatingNoteWindow(node) {
+    if (!node || !node.data || !node.data.note) {
+        console.warn('节点没有备注内容');
+        return;
+    }
+    
+    console.log('显示悬浮备注窗口:', node.id, node.topic);
+    
+    // 移除任何已存在的悬浮窗
+    const existingWindows = document.querySelectorAll('.floating-note-window');
+    existingWindows.forEach(win => win.remove());
+    
+    // 创建悬浮窗容器
+    const floatingWindow = document.createElement('div');
+    floatingWindow.className = 'floating-note-window';
+    
+    // 设置样式，确保悬浮窗位于最上层
+    Object.assign(floatingWindow.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: '10000', // 确保在所有元素之上
+        backgroundColor: 'white',
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+        padding: '20px',
+        maxWidth: '500px',
+        width: '80%',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'Arial, sans-serif'
+    });
+    
+    // 创建标题栏
+    const titleBar = document.createElement('div');
+    Object.assign(titleBar.style, {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '1px solid #eaeaea',
+        paddingBottom: '12px',
+        marginBottom: '15px'
+    });
+    
+    // 添加标题
+    const title = document.createElement('div');
+    title.textContent = node.topic || '节点备注';
+    Object.assign(title.style, {
+        fontWeight: 'bold',
+        fontSize: '18px',
+        color: '#333'
+    });
+    titleBar.appendChild(title);
+    
+    // 添加关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '×';
+    Object.assign(closeBtn.style, {
+        background: 'none',
+        border: 'none',
+        fontSize: '24px',
+        color: '#666',
+        cursor: 'pointer',
+        padding: '0 5px',
+        lineHeight: '1'
+    });
+    closeBtn.addEventListener('click', () => floatingWindow.remove());
+    titleBar.appendChild(closeBtn);
+    
+    // 添加内容区域
+    const content = document.createElement('div');
+    content.textContent = node.data.note;
+    Object.assign(content.style, {
+        fontSize: '16px',
+        lineHeight: '1.6',
+        color: '#444',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word'
+    });
+    
+    // 组装窗口
+    floatingWindow.appendChild(titleBar);
+    floatingWindow.appendChild(content);
+    
+    // 添加到body
+    document.body.appendChild(floatingWindow);
+    
+    // 允许拖动悬浮窗
+    let isDragging = false;
+    let offsetX, offsetY;
+    
+    titleBar.addEventListener('mousedown', function(e) {
+        // 确保不是点击关闭按钮
+        if (e.target !== closeBtn) {
+            isDragging = true;
+            offsetX = e.clientX - floatingWindow.getBoundingClientRect().left;
+            offsetY = e.clientY - floatingWindow.getBoundingClientRect().top;
+            
+            // 修改光标样式
+            titleBar.style.cursor = 'grabbing';
+        }
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (isDragging) {
+            // 改为直接设置具体位置，取消transform
+            floatingWindow.style.transform = 'none';
+            floatingWindow.style.left = `${e.clientX - offsetX}px`;
+            floatingWindow.style.top = `${e.clientY - offsetY}px`;
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        if (isDragging) {
+            isDragging = false;
+            titleBar.style.cursor = 'grab';
+        }
+    });
+    
+    // 设置标题栏的初始光标样式
+    titleBar.style.cursor = 'grab';
+    
+    // 添加点击监听，点击其他节点或空白处时关闭窗口
+    document.addEventListener('click', function closeOnClick(e) {
+        // 如果点击的是当前窗口内的元素，不做处理
+        if (floatingWindow.contains(e.target)) {
+            return;
+        }
+        
+        // 检查点击的是否是任何节点元素
+        const clickedNode = e.target.closest('jmnode');
+        const clickedOnCanvas = e.target.closest('#jsmind_container');
+        
+        // 如果点击了其他节点或画布空白处，关闭窗口
+        if (clickedNode || (clickedOnCanvas && !clickedNode)) {
+            console.log('点击了其他节点或空白处，关闭备注窗口');
+            floatingWindow.remove();
+            document.removeEventListener('click', closeOnClick);
+        }
+    });
+    
+    // 点击事件监听器需要延迟添加，避免立即触发
+    setTimeout(() => {
+        // 阻止第一次点击事件触发关闭
+        const initialClickEvent = (e) => {
+            e.stopPropagation();
+            document.removeEventListener('click', initialClickEvent, true);
+        };
+        document.addEventListener('click', initialClickEvent, true);
+    }, 0);
+    
+    // 按Esc键关闭窗口
+    const escKeyHandler = function(e) {
+        if (e.key === 'Escape') {
+            floatingWindow.remove();
+            document.removeEventListener('keydown', escKeyHandler);
+        }
+    };
+    document.addEventListener('keydown', escKeyHandler);
+    
+    return floatingWindow;
 }

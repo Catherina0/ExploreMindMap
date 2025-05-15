@@ -115,6 +115,49 @@
     border: 1px solid var(--border-color);
 }
 
+/* 增强AI消息中JSON格式显示 */
+.ai-message .json-content {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+    color: #333;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #e5e7eb;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+/* JSON语法高亮 */
+.json-content .json-key {
+    color: #0550ae;
+    font-weight: 500;
+}
+
+.json-content .json-string {
+    color: #22863a;
+}
+
+.json-content .json-number {
+    color: #986801;
+}
+
+.json-content .json-boolean {
+    color: #005cc5;
+    font-weight: 500;
+}
+
+.json-content .json-null {
+    color: #5a5a5a;
+    font-style: italic;
+}
+
 .user-message {
     background-color: var(--primary-light);
     align-self: flex-end;
@@ -182,54 +225,52 @@
 
 /* 思维导图修改建议 */
 .mindmap-modification {
-    background-color: var(--primary-light);
-    border-left: 3px solid var(--primary-color);
-    padding: 14px 16px;
-    margin: 12px 0;
-    font-family: monospace;
-    white-space: pre;
-    overflow-x: auto;
+    margin-top: 10px;
+    padding: 12px;
+    background-color: #f0f7ff;
+    border: 1px solid #d0e3ff;
     border-radius: var(--radius-sm);
     font-size: 0.9rem;
     line-height: 1.5;
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .modification-controls {
     display: flex;
     justify-content: flex-end;
-    margin-top: 14px;
-    gap: 12px;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.modification-controls button {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .apply-button {
     background-color: var(--primary-color);
     color: white;
-    border: none;
-    padding: 8px 14px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
+    border: 1px solid var(--primary-color);
 }
 
 .apply-button:hover {
     background-color: var(--primary-dark);
-    transform: translateY(-1px);
 }
 
 .reject-button {
-    background-color: transparent;
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    padding: 8px 14px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
+    background-color: white;
+    color: #666;
+    border: 1px solid #ddd;
 }
 
 .reject-button:hover {
-    background-color: var(--hover-bg);
+    background-color: #f5f5f5;
+    color: #333;
 }
 
 /* 侧边编辑器样式 */

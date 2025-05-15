@@ -241,6 +241,27 @@ body {
     display: inline-block;
 }
 
+/* JSON格式化样式 */
+.json-content {
+    background-color: #f8f9fa;
+    color: #333;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin: 10px 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.message.ai-message .json-content {
+    max-width: 100%;
+}
+
 #save_dropdown, #load_dropdown {
     position: absolute;
     background-color: var(--bg-color);

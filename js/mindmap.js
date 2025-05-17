@@ -454,11 +454,6 @@ function addNoteMarker(node) {
             return;
         }
         
-        // 为整个节点添加title属性，以便在鼠标悬停时显示备注内容预览
-        const notePreview = node.data.note.length > 50 ? 
-            node.data.note.substring(0, 50) + '...' : node.data.note;
-        nodeElement.setAttribute('title', `备注: ${notePreview}`);
-        
         // 检查是否已有标记
         if (nodeElement.querySelector('.note-indicator')) {
             return;
@@ -878,8 +873,8 @@ function renderAllNoteMarkers() {
                     typeof node.data.note === 'string' && node.data.note.trim() !== '') {
                     
                     // 尝试添加备注标记
-                                addNoteMarker(node);
-                                noteCount++;
+                    addNoteMarker(node);
+                    noteCount++;
                 }
             } catch (nodeError) {
                 console.error(`处理节点 ${node?.id || '未知'} 时出错:`, nodeError);
@@ -894,18 +889,18 @@ function renderAllNoteMarkers() {
                     if (node && node.data && node.data.note && 
                         typeof node.data.note === 'string' && node.data.note.trim() !== '') {
                         
-                            // 手动查找节点DOM元素
-                            const nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
-                            if (nodeElement) {
-                                try {
-                                    addNoteMarker(node);
-                                } catch (e) {
-                                    console.error(`手动添加备注标记失败:`, e);
-                                }
+                        // 手动查找节点DOM元素
+                        const nodeElement = document.querySelector(`jmnode[nodeid="${node.id}"]`);
+                        if (nodeElement) {
+                            try {
+                                addNoteMarker(node);
+                            } catch (e) {
+                                console.error(`手动添加备注标记失败:`, e);
                             }
                         }
-                    });
-            }, 500);
+                    }
+                });
+            }, 200); // 减少延迟时间提高响应速度
         }
     } catch (e) {
         console.error('渲染备注标记失败:', e);

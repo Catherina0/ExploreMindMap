@@ -52,6 +52,12 @@ function initChat() {
         requestMindmapModification();
     });
     
+    // 绑定扩展内容按钮
+    document.getElementById('expand_content').addEventListener('click', function() {
+        console.log('用户请求扩展内容');
+        requestContentExpansion();
+    });
+    
     // 绑定AI服务类型切换
     document.getElementById('ai_service').addEventListener('change', function() {
         const azureSettings = document.querySelector('.azure-settings');
@@ -675,6 +681,8 @@ async function processAIRequest(query) {
 
 【重要】只有当用户明确点击了"修改思维导图"按钮时，你才应该进入思维导图修改模式。在普通聊天中，即使用户询问关于思维导图的内容，也请用普通文本回答，不要输出JSON格式。
 
+对每个重要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
+
 当进入思维导图修改模式时：
 1. 首先提供一段文字，简要概述你的修改建议
 2. 然后提供JSON格式的详细修改指令，包含至少两层的节点结构（即子节点及其子节点），并为重要节点添加详细备注。
@@ -682,14 +690,14 @@ async function processAIRequest(query) {
 JSON格式要求如下：
 [
   {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容"},
+    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
     {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容"}
+      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "新内容"},
   {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容"}
+    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
   ]},
   {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
 ]
@@ -705,6 +713,8 @@ In your dialogue with users, you operate in two modes:
 
 【IMPORTANT】Only when the user explicitly clicks the "Modify Mind Map" button should you enter mind map modification mode. In normal chat, even if the user asks about mind maps, please answer with normal text, not with JSON format.
 
+【NOTE IMPORTANCE】Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
+
 When in mind map modification mode:
 1. First provide a text paragraph that briefly summarizes your modification suggestions
 2. Then provide JSON-formatted detailed modification instructions, including at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes.
@@ -712,14 +722,14 @@ When in mind map modification mode:
 IMPORTANT: Even in English conversations, you must use the exact Chinese action names in your JSON responses as shown below:
 [
   {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 1 content", "note": "Detailed explanation and supplementary information for second-level node 1"},
     {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content"}
+      {"topic": "Third-level node content", "note": "Detailed explanation for the third-level node"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "New content"},
   {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content"}
+    {"topic": "Child node content", "note": "Supplementary information for the child node"}
   ]},
   {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
 ]
@@ -1011,14 +1021,14 @@ async function requestMindmapModification() {
 JSON格式要求如下:
 [
   {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容"},
+    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
     {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容"}
+      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "新内容"},
   {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容"}
+    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
   ]},
   {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
 ]
@@ -1042,14 +1052,14 @@ Then after the text overview, provide the detailed modification instructions in 
 The JSON format requirements are as follows:
 [
   {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 1 content", "note": "(optional)Detailed explanation and supplementary information for second-level node 1"},
     {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content"}
+      {"topic": "Third-level node content", "note": "(optional)Detailed explanation for the third-level node"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "New content"},
   {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content"}
+    {"topic": "Child node content", "note": "(optional)Supplementary information for the child node"}
   ]},
   {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
 ]
@@ -1088,6 +1098,8 @@ Important: Please first provide a text overview, then the JSON format data.`
 
 【重要】只有当用户明确点击了"修改思维导图"按钮时，你才应该进入思维导图修改模式。在普通聊天中，即使用户询问关于思维导图的内容，也请用普通文本回答，不要输出JSON格式。
 
+对每个主要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
+
 当进入思维导图修改模式时：
 1. 首先提供一段文字，简要概述你的修改建议
 2. 然后提供JSON格式的详细修改指令，包含至少两层的节点结构（即子节点及其子节点），并为重要节点添加详细备注。
@@ -1095,14 +1107,14 @@ Important: Please first provide a text overview, then the JSON format data.`
 JSON格式要求如下：
 [
   {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容"},
+    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
     {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容"}
+      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "新内容"},
   {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容"}
+    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
   ]},
   {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
 ]
@@ -1118,6 +1130,8 @@ In your dialogue with users, you operate in two modes:
 
 【IMPORTANT】Only when the user explicitly clicks the "Modify Mind Map" button should you enter mind map modification mode. In normal chat, even if the user asks about mind maps, please answer with normal text, not with JSON format.
 
+Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
+
 When in mind map modification mode:
 1. First provide a text paragraph that briefly summarizes your modification suggestions
 2. Then provide JSON-formatted detailed modification instructions, including at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes.
@@ -1125,14 +1139,14 @@ When in mind map modification mode:
 IMPORTANT: Even in English conversations, you must use the exact Chinese action names in your JSON responses as shown below:
 [
   {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content"},
+    {"topic": "Second-level node 1 content", "note": "(optional)Detailed explanation and supplementary information for second-level node 1"},
     {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content"}
+      {"topic": "Third-level node content", "note": "(optional)Detailed explanation for the third-level node"}
     ]}
   ]},
   {"action": "修改当前节点", "topic": "New content"},
   {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content"}
+    {"topic": "Child node content", "note": "(optional)Supplementary information for the child node"}
   ]},
   {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
 ]
@@ -1315,5 +1329,250 @@ function handleAIResponse(response, isModification) {
 // 处理AI返回的JSON数据 - 使用新模块进行解析
 function parseAIResponseJSON(content) {
     return window.mindmapModifier.parseAIResponse(content);
+}
+
+// 发送扩展内容请求
+async function requestContentExpansion() {
+    // 检查AI助手是否开启
+    if (!aiAssistantEnabled) {
+        addMessage('ai', window.i18n.t('enable_ai_first'));
+        console.log('AI助手已关闭，不允许扩展内容');
+        return;
+    }
+    
+    // 如果没有选中节点，尝试使用根节点
+    if (!selectedNode && jm && jm.mind && jm.mind.root) {
+        console.log('未选中节点，使用根节点');
+        selectedNode = jm.mind.root;
+    }
+    
+    // 检查是否有选中的节点
+    if (!selectedNode) {
+        addMessage('ai', window.i18n.t('select_node_for_modify'));
+        return;
+    }
+    
+    // 验证选中节点的有效性
+    if (!selectedNode.id || typeof selectedNode.id !== 'string') {
+        addMessage('ai', window.i18n.t('invalid_node_id'));
+        console.error('选中节点无效:', selectedNode);
+        return;
+    }
+    
+    // 验证节点在jsMind中是否存在
+    const nodeInMind = jm.get_node(selectedNode.id);
+    if (!nodeInMind) {
+        addMessage('ai', window.i18n.t('node_not_found', selectedNode.id));
+        console.error('节点不存在于jsMind中:', selectedNode.id);
+        return;
+    }
+    
+    // 检查API密钥是否存在
+    const apiKey = document.getElementById('api_key').value;
+    if (!apiKey) {
+        addMessage('ai', window.i18n.t('api_settings_prompt'));
+        document.getElementById('api_settings').classList.add('show');
+        return;
+    }
+    
+    // 构建特定的提示词，要求AI扩展选中节点的内容
+    const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+    
+    // 中英文提示词模板
+    const expansionPrompts = {
+        zh: `【思维导图内容扩展】请根据我的思维导图和当前选中的节点，提供详细的内容扩展。
+
+当前思维导图结构: ${getMindmapStructure()}
+
+当前选中的节点是: "${selectedNode ? selectedNode.topic : '根节点'}"
+
+请沿着选中节点的思路继续深入扩展内容。提供与该节点主题相关的深入分析、详细信息或新的相关概念。
+
+请先用文字简要概述你的扩展建议，说明你将如何深入当前节点的内容。
+然后在文字概述后面，提供JSON格式的详细修改指令。
+
+JSON格式要求如下:
+[
+  {"action": "添加子节点", "topic": "扩展主题1", "children": [
+    {"topic": "子主题1.1", "note": "对子主题1.1的详细说明和补充信息"},
+    {"topic": "子主题1.2", "children": [
+      {"topic": "子主题1.2.1", "note": "对子主题1.2.1的详细说明和补充信息"}
+    ]}
+  ]},
+  {"action": "添加注释", "topic": "详细的注释内容，提供对当前节点主题的深入解释。"}
+]
+
+请尽量提供丰富详细的内容，包括多级节点结构和深入的解释说明。`,
+
+        en: `【MIND MAP CONTENT EXPANSION】Based on my mind map and the currently selected node, please provide detailed content expansion.
+
+Current mind map structure: ${getMindmapStructure()}
+
+Currently selected node: "${selectedNode ? selectedNode.topic : 'Root node'}"
+
+Please continue to expand the content along the direction of the selected node. Provide in-depth analysis, detailed information, or new related concepts relevant to this node's topic.
+
+First, please provide a brief text overview of your expansion suggestions, explaining how you will deepen the content of the current node.
+Then after the text overview, provide the detailed modification instructions in JSON format.
+
+The JSON format requirements are as follows:
+[
+  {"action": "添加子节点", "topic": "Expansion topic 1", "children": [
+    {"topic": "Subtopic 1.1", "note": "(optional)Detailed explanation and supplementary information for subtopic 1.1"},
+    {"topic": "Subtopic 1.2", "children": [
+      {"topic": "Subtopic 1.2.1", "note": "(optional)Detailed explanation for the subtopic 1.2.1"}
+    ]}
+  ]},
+  {"action": "添加注释", "topic": "Detailed note content providing in-depth explanation of the current node's topic."}
+]
+
+Please provide rich and detailed content, including multi-level node structures and in-depth explanations. Each important node should include detailed note content.`
+    };
+    
+    const expansionPrompt = expansionPrompts[currentLang] || expansionPrompts.zh;
+    
+    // 在界面上显示加载状态
+    document.getElementById('loading').style.display = 'block';
+    
+    // 添加用户请求消息
+    const userRequestMessage = currentLang === 'en' ? 
+        'Please expand the content of the selected node' : 
+        '请扩展当前选中节点的内容';
+    addMessage('user', userRequestMessage);
+    
+    try {
+        // 准备发送请求
+        const aiService = document.getElementById('ai_service').value;
+        let endpoint;
+        let headers = {'Content-Type': 'application/json'};
+        let messages = [];
+        
+        const systemPrompts = {
+            zh: `你是一个强大的思维导图助手，能够帮助用户扩展和深化思维导图中的内容。
+请根据用户选择的节点，提供相关的深入内容、概念和解释。
+
+对每个主要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
+
+当用户请求扩展内容时，请提供JSON格式的节点修改建议，遵循以下格式：
+
+[
+  {"action": "添加子节点", "topic": "扩展主题", "children": [
+    {"topic": "子主题1", "note": "(可选)对子主题1的详细说明和补充信息"},
+    {"topic": "子主题2", "children": [
+      {"topic": "子子主题", "note": "(可选)对子子主题的详细说明"}
+    ]}
+  ]},
+  {"action": "添加注释", "topic": "详细的注释内容，提供深入解释。"}
+]
+
+请确保你的建议与用户选择的节点主题相关，并提供有价值的内容扩展。每个重要节点都应包含详细的注释内容。`,
+
+            en: `You are a powerful mind map assistant who can help users expand and deepen the content in their mind maps.
+Based on the user's selected node, provide related in-depth content, concepts, and explanations.
+
+【NOTE IMPORTANCE】Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
+
+When the user requests content expansion, provide node modification suggestions in JSON format, following this structure:
+
+[
+  {"action": "添加子节点", "topic": "Expansion topic", "children": [
+    {"topic": "Subtopic 1", "note": "(optional)Detailed explanation and supplementary information for subtopic 1"},
+    {"topic": "Subtopic 2", "children": [
+      {"topic": "Sub-subtopic", "note": "(optional)Detailed explanation for the sub-subtopic"}
+    ]}
+  ]},
+  {"action": "添加注释", "topic": "Detailed note content providing in-depth explanation."}
+]
+
+Ensure your suggestions are relevant to the user's selected node topic and provide valuable content expansion. Every important node should include detailed note content.`
+        };
+        
+        if (aiService === 'openai') {
+            endpoint = 'https://api.openai.com/v1/chat/completions';
+            
+            messages = [
+                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'user', content: expansionPrompt }
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                apiKey: apiKey,
+                model: 'gpt-4o',
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送OpenAI内容扩展请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('内容扩展请求响应:', data);
+            
+            // 处理响应
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const content = data.choices[0].message.content;
+                
+                // 使用修改模块解析扩展建议
+                const parseResult = parseAIResponseJSON(content);
+                
+                if (parseResult.success && parseResult.modifications) {
+                    addMessage('ai', content, parseResult.modifications);
+                } else {
+                    console.error('解析扩展建议失败:', parseResult.error);
+                    addMessage('ai', `无法解析扩展建议，AI返回的内容可能不是有效的JSON格式。以下是原始响应:\n\n${content}`);
+                }
+            } else {
+                throw new Error('AI响应缺少必要数据');
+            }
+        } else if (aiService === 'deepseek') {
+            endpoint = 'https://api.deepseek.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${apiKey}`;
+            
+            messages = [
+                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'user', content: expansionPrompt }
+            ];
+            
+            const requestData = {
+                endpoint: endpoint,
+                headers: headers,
+                model: 'deepseek-chat',
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 2000
+            };
+            
+            console.log('发送Deepseek内容扩展请求...');
+            const data = await window.openaiApi.createCompletion(requestData);
+            console.log('内容扩展请求响应:', data);
+            
+            // 处理响应
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                const content = data.choices[0].message.content;
+                
+                // 使用修改模块解析扩展建议
+                const parseResult = parseAIResponseJSON(content);
+                
+                if (parseResult.success && parseResult.modifications) {
+                    addMessage('ai', content, parseResult.modifications);
+                } else {
+                    console.error('解析扩展建议失败:', parseResult.error);
+                    addMessage('ai', `无法解析扩展建议，AI返回的内容可能不是有效的JSON格式。以下是原始响应:\n\n${content}`);
+                }
+            } else {
+                throw new Error('AI响应缺少必要数据');
+            }
+        } else if (aiService === 'azure') {
+            // Azure实现暂时保留原样
+            addMessage('ai', `暂不支持使用 ${aiService} 服务进行内容扩展。请切换到OpenAI或Deepseek服务。`);
+        } else {
+            throw new Error('不支持的AI服务');
+        }
+    } catch (error) {
+        console.error('内容扩展请求错误:', error);
+        addMessage('ai', `发生错误: ${error.message}`);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
 }
 

@@ -315,19 +315,6 @@ function initJsMind() {
                             console.log('节点有LaTeX公式，显示公式');
                             showNodeFormula(selectedNode);
                         }
-                    } else {
-                        // 单击且节点有备注，显示备注
-                        if (selectedNode.data && selectedNode.data.note) {
-                            console.log('节点有备注，显示备注');
-                            // 使用浮动窗口显示备注
-                            if (typeof showFloatingNoteWindow === 'function') {
-                                showFloatingNoteWindow(selectedNode);
-                            } else if (typeof window.showFloatingNoteWindow === 'function') {
-                                window.showFloatingNoteWindow(selectedNode);
-                            } else {
-                                console.warn('找不到showFloatingNoteWindow函数，无法显示备注');
-                            }
-                        }
                     }
                     selectedNode._lastClickTime = now;
                     
@@ -351,6 +338,18 @@ function initJsMind() {
                     console.error('节点选择处理异常:', error);
                 }
                 console.groupEnd();
+            }
+            // 监听节点移动事件，重新渲染注释标记
+            else if (type === jsMind.event_type.edit || 
+                    type === jsMind.event_type.edit_finish || 
+                    type === jsMind.event_type.show) {
+                console.log(`[节点${type}事件] 重新渲染注释标记`);
+                // 延迟一点时间确保DOM已更新
+                setTimeout(() => {
+                    if (typeof window.renderAllNoteMarkers === 'function') {
+                        window.renderAllNoteMarkers();
+                    }
+                }, 200);
             }
         });
         

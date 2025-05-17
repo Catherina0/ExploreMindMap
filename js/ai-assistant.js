@@ -931,12 +931,12 @@ function toggleAIAssistant() {
     // 显示状态变更消息
     const statusMessages = {
         zh: {
-            enabled: 'AI助手已开启，将自动响应您选择的节点。',
-            disabled: 'AI助手已关闭，只会响应您的直接提问。'
+            enabled: '当前为编辑模式，将自动响应您选择的节点。',
+            disabled: '当前为对话模式，将只响应您的直接提问。'
         },
         en: {
-            enabled: 'AI Assistant enabled. It will automatically respond to your selected nodes.',
-            disabled: 'AI Assistant disabled. It will only respond to your direct questions.'
+            enabled: 'Currently in edit mode, will automatically respond to your selected nodes.',
+            disabled: 'Currently in conversation mode, will only respond to your direct questions.'
         }
     };
     
@@ -951,7 +951,7 @@ async function requestMindmapModification() {
     // 检查AI助手是否开启
     if (!aiAssistantEnabled) {
         addMessage('ai', window.i18n.t('enable_ai_first'));
-        console.log('AI助手已关闭，不允许修改思维导图');
+        console.log('当前为对话模式，不允许修改思维导图');
         return;
     }
     
@@ -1336,7 +1336,7 @@ async function requestContentExpansion() {
     // 检查AI助手是否开启
     if (!aiAssistantEnabled) {
         addMessage('ai', window.i18n.t('enable_ai_first'));
-        console.log('AI助手已关闭，不允许扩展内容');
+        console.log('当前为对话模式，不允许扩展内容');
         return;
     }
     

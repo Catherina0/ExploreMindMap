@@ -114,7 +114,7 @@ const translations = {
         'node_add_error': '添加节点失败: {0}',
         'invalid_node_id': '选中节点没有有效ID',
         'api_settings_prompt': '请先点击设置，输入API密钥。',
-        'enable_ai_first': '请先开启AI助手，才能使用思维导图修改功能。',
+        'enable_ai_first': '当前为对话模式，请切换到编辑模式才能修改思维导图。',
         'select_node_for_modify': '请先选择一个节点，然后再请求修改思维导图。',
         'node_not_found': '无法在jsMind中找到节点: {0}',
         
@@ -238,7 +238,7 @@ const translations = {
         'node_add_error': 'Failed to add node: {0}',
         'invalid_node_id': 'Selected node does not have a valid ID',
         'api_settings_prompt': 'Please click settings and enter your API key first.',
-        'enable_ai_first': 'Please enable the AI assistant first to use the mind map modification function.',
+        'enable_ai_first': 'Currently in conversation mode. Please switch to edit mode to modify the mind map.',
         'select_node_for_modify': 'Please select a node first, then request to modify the mind map.',
         'node_not_found': 'Node not found in jsMind: {0}',
         

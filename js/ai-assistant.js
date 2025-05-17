@@ -6,8 +6,120 @@
 // - aiAssistantEnabled
 // - selectedNode
 // - jm
+// 本文件还依赖ai-prompts.js中定义的提示词模块
 
 const MAX_CONTEXT_LENGTH = 10; // 最大上下文长度
+const MAX_RETRY_ATTEMPTS = 3;  // 最大重试次数
+const RETRY_DELAY = 5000;      // 重试延迟时间（毫秒）
+
+// 更新加载状态
+function updateLoadingStatus(message, isRetry = false) {
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        if (isRetry) {
+            loadingEl.innerHTML = `${message} <span class="retry-indicator">(重试中...)</span>`;
+            loadingEl.classList.add('retrying');
+        } else {
+            loadingEl.innerHTML = message;
+            loadingEl.classList.remove('retrying');
+        }
+    }
+}
+
+// 带有重试逻辑的AI请求函数
+async function createCompletionWithRetry(requestData, aiService) {
+    let attempts = 0;
+    let lastError = null;
+    
+    // 记录完整的提示词内容到控制台
+    console.log('发送到AI的完整内容:', {
+        aiService: aiService,
+        model: requestData.model || '未指定',
+        messages: requestData.messages
+    });
+    
+    while (attempts < MAX_RETRY_ATTEMPTS) {
+        try {
+            attempts++;
+            // 指数退避策略，重试延迟逐渐增加
+            const delay = attempts > 1 ? RETRY_DELAY * Math.pow(1.5, attempts - 1) : 0;
+            
+            if (attempts > 1) {
+                console.log(`等待 ${Math.round(delay/1000)} 秒后进行第 ${attempts} 次尝试...`);
+                // 更新界面显示为重试状态
+                updateLoadingStatus(`处理中... 第 ${attempts}/${MAX_RETRY_ATTEMPTS} 次尝试`, true);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+                updateLoadingStatus('处理中...');
+            }
+            
+            console.log(`正在执行第 ${attempts}/${MAX_RETRY_ATTEMPTS} 次请求...`);
+            
+            // 设置本地超时（防止openaiApi的超时失效）
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('请求超时')), 65000); // 比openaiApi的超时稍长
+            });
+            
+            // 实际请求
+            const requestPromise = window.openaiApi.createCompletion(requestData);
+            
+            // 竞争Promise
+            const response = await Promise.race([requestPromise, timeoutPromise]);
+            console.log(`AI响应成功 (尝试 ${attempts}/${MAX_RETRY_ATTEMPTS})`);
+            // 重置加载状态
+            updateLoadingStatus('处理中...');
+            return response;
+        } catch (error) {
+            lastError = error;
+            console.warn(`AI请求失败 (尝试 ${attempts}/${MAX_RETRY_ATTEMPTS}): ${error.message}`);
+            
+            // 判断错误类型，决定是否继续重试
+            const errorMessage = error.message.toLowerCase();
+            
+            // 这些错误类型应该重试
+            const shouldRetry = 
+                errorMessage.includes('timeout') || 
+                errorMessage.includes('超时') ||
+                errorMessage.includes('rate limit') || 
+                errorMessage.includes('too many requests') ||
+                errorMessage.includes('429') || // Rate limit HTTP码
+                errorMessage.includes('500') || // 服务器错误
+                errorMessage.includes('502') || // 错误网关
+                errorMessage.includes('503') || // 服务不可用
+                errorMessage.includes('504') || // 网关超时
+                errorMessage.includes('network') || // 网络错误
+                errorMessage.includes('connection'); // 连接错误
+                
+            // 这些错误类型不应该重试
+            const noRetry = 
+                errorMessage.includes('authentication') ||
+                errorMessage.includes('auth') ||
+                errorMessage.includes('api key') ||
+                errorMessage.includes('invalid') ||
+                errorMessage.includes('not found') ||
+                errorMessage.includes('404');
+                
+            if (noRetry) {
+                console.error(`遇到不可重试的错误，停止重试:`, error.message);
+                break; // 退出循环，不再重试
+            }
+            
+            if (attempts < MAX_RETRY_ATTEMPTS && (shouldRetry || !noRetry)) {
+                console.log(`将在稍后重试 (${attempts}/${MAX_RETRY_ATTEMPTS})...`);
+            } else {
+                console.error(`已达到最大重试次数或遇到不可重试的错误，停止重试`);
+                // 重置加载状态
+                updateLoadingStatus('处理中...');
+                break;
+            }
+        }
+    }
+    
+    // 所有重试都失败
+    // 重置加载状态
+    updateLoadingStatus('处理中...');
+    throw new Error(`AI请求失败，已尝试 ${attempts} 次: ${lastError.message}`);
+}
 
 // 初始化聊天界面
 function initChat() {
@@ -579,6 +691,8 @@ async function processAIRequest(query) {
     }
     
     try {
+        // 显示加载状态
+        updateLoadingStatus(window.i18n.t('loading') || '处理中...');
         document.getElementById('loading').style.display = 'block';
         
         let prompt = '';
@@ -588,29 +702,7 @@ async function processAIRequest(query) {
         if (isFirstQuery) {
             console.log('首次查询，添加思维导图结构信息');
             
-            // 中英文提示词模板
-            const promptTemplates = {
-                zh: {
-                    intro: `请协助我处理这个思维导图。思维导图结构如下：\n${getMindmapStructure()}\n\n`,
-                    selectedNode: `当前选中的节点是: "{NODE_TOPIC}"\n`,
-                    path: `节点路径: {PATH}\n`,
-                    children: `子节点: {CHILDREN}\n`,
-                    question: `\n我的问题是: {QUERY}\n`
-                },
-                en: {
-                    intro: `Please help me with this mind map. The mind map structure is as follows:\n${getMindmapStructure()}\n\n`,
-                    selectedNode: `Currently selected node: "{NODE_TOPIC}"\n`,
-                    path: `Node path: {PATH}\n`,
-                    children: `Child nodes: {CHILDREN}\n`,
-                    question: `\nMy question is: {QUERY}\n`
-                }
-            };
-            
-            // 获取当前语言的模板
-            const template = promptTemplates[currentLang] || promptTemplates.zh;
-            
             // 构建提示词
-            prompt = template.intro;
             
             // 如果没有选中节点，则使用根节点
             if (!selectedNode && jm && jm.mind && jm.mind.root) {
@@ -618,31 +710,37 @@ async function processAIRequest(query) {
                 selectedNode = jm.mind.root;
             }
             
+            // 准备参数
+            const mindmapStructure = getMindmapStructure();
+            let nodeTopic = '';
+            let path = [];
+            let childrenText = '';
+            
             // 如果有选中的节点，添加节点信息
             if (selectedNode) {
-                prompt += template.selectedNode.replace('{NODE_TOPIC}', selectedNode.topic);
+                nodeTopic = selectedNode.topic;
                 
                 // 添加节点的路径信息
-                const path = getNodePath(selectedNode);
-                if (path.length > 0) {
-                    prompt += template.path.replace('{PATH}', path.join(' > '));
-                }
+                path = getNodePath(selectedNode);
                 
                 // 添加子节点信息
                 if (selectedNode.children && selectedNode.children.length > 0) {
-                    prompt += template.children.replace(
-                        '{CHILDREN}', 
-                        selectedNode.children.map(child => `"${child.topic}"`).join(', ')
-                    );
+                    childrenText = selectedNode.children.map(child => `"${child.topic}"`).join(', ');
                 }
             } else {
                 console.log('未能找到有效节点');
-                prompt += currentLang === 'en' ? 
-                    'No node is currently selected.\n' : 
-                    '当前没有选中任何节点。\n';
             }
             
-            prompt += template.question.replace('{QUERY}', query);
+            // 使用提示词模块生成首次查询提示词
+            prompt = window.aiPrompts.getFirstQueryPrompt(
+                currentLang, 
+                mindmapStructure, 
+                nodeTopic, 
+                path.join(' > '), 
+                childrenText, 
+                query
+            );
+            
             isFirstQuery = false;
         } else {
             // 后续对话，直接传递用户问题
@@ -671,82 +769,12 @@ async function processAIRequest(query) {
         let headers = {'Content-Type': 'application/json'};
         let messages = [];
         
-        // 构建系统指令
-        const systemPrompts = {
-            zh: `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
-
-在与用户的对话中，你有两种模式：
-1. 普通对话模式：回答用户问题，提供信息和知识
-2. 思维导图修改模式：提供修改建议的文字说明和JSON格式的具体修改指令
-
-【重要】只有当用户明确点击了"修改思维导图"按钮时，你才应该进入思维导图修改模式。在普通聊天中，即使用户询问关于思维导图的内容，也请用普通文本回答，不要输出JSON格式。
-
-对每个重要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
-
-当进入思维导图修改模式时：
-1. 首先提供一段文字，简要概述你的修改建议
-2. 然后提供JSON格式的详细修改指令，包含至少两层的节点结构（即子节点及其子节点），并为重要节点添加详细备注。
-
-JSON格式要求如下：
-[
-  {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
-    {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "新内容"},
-  {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
-  ]},
-  {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
-]
-
-确保在思维导图修改模式中先提供文字概述，再提供JSON格式的具体修改指令。在普通对话模式中只使用正常文本回复。
-`,
-
-            en: `You are a powerful mind map assistant who can both help users expand and refine their mind maps, as well as provide normal conversational responses and knowledge.
-
-In your dialogue with users, you operate in two modes:
-1. Normal conversation mode: Answer questions, provide information and knowledge
-2. Mind map modification mode: Provide a text overview of your suggestions, followed by JSON-formatted specific modification instructions
-
-【IMPORTANT】Only when the user explicitly clicks the "Modify Mind Map" button should you enter mind map modification mode. In normal chat, even if the user asks about mind maps, please answer with normal text, not with JSON format.
-
-【NOTE IMPORTANCE】Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
-
-When in mind map modification mode:
-1. First provide a text paragraph that briefly summarizes your modification suggestions
-2. Then provide JSON-formatted detailed modification instructions, including at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes.
-
-IMPORTANT: Even in English conversations, you must use the exact Chinese action names in your JSON responses as shown below:
-[
-  {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content", "note": "Detailed explanation and supplementary information for second-level node 1"},
-    {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content", "note": "Detailed explanation for the third-level node"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "New content"},
-  {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content", "note": "Supplementary information for the child node"}
-  ]},
-  {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
-]
-
-The action names MUST be in Chinese exactly as shown above: "添加子节点", "修改当前节点", "添加兄弟节点", "添加注释". 
-The content can be in English, but the action names must be in Chinese.
-
-Ensure that in mind map modification mode, you first provide a text overview, then the JSON-formatted specific instructions. In conversation mode, use only normal text responses.
-`
-        };
-        
         // 根据不同的AI服务调整请求格式
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 ...conversationHistory
             ];
             
@@ -760,7 +788,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             };
             
             console.log('发送OpenAI请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('API响应:', data);
             
             // 处理响应
@@ -805,7 +833,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             headers['api-key'] = cleanApiKey;
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 ...conversationHistory
             ];
             
@@ -818,7 +846,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             };
             
             console.log('发送Azure请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('API响应:', data);
             
             // 处理响应
@@ -855,7 +883,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             headers['Authorization'] = `Bearer ${apiKey}`;
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 ...conversationHistory
             ];
             
@@ -869,7 +897,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             };
             
             console.log('发送Deepseek请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('API响应:', data);
             
             // 处理响应
@@ -1005,75 +1033,18 @@ async function requestMindmapModification() {
         }
     }
     
-    // 构建特定的提示词，要求AI生成思维导图修改建议
-    // 中英文提示词模板
-    const modificationPrompts = {
-        zh: `【思维导图修改模式】请根据我的思维导图和当前选中的节点，提供详细的多层次修改建议。
-我的上一个问题是: "${latestUserQuery}"
-
-当前思维导图结构: ${getMindmapStructure()}
-
-当前选中的节点是: "${selectedNode ? selectedNode.topic : '根节点'}"
-
-请先用文字简要概述你的修改建议，说明你将如何扩展或改进当前思维导图。
-然后在文字概述后面，提供JSON格式的详细修改指令。
-
-JSON格式要求如下:
-[
-  {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
-    {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "新内容"},
-  {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
-  ]},
-  {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
-]
-
-对于注释内容，请尽可能详细和专业，提供丰富的背景信息、解释和案例。
-注释内容可以包含多个段落，可以适当排版。
-请尽量提供丰富详细的内容，包括多级节点结构和详细的备注说明。
-
-重要：请首先提供文字概述，然后再提供JSON格式数据。`,
-
-        en: `【MIND MAP MODIFICATION MODE】Based on my mind map and the currently selected node, please provide detailed multi-level modification suggestions.
-My last question was: "${latestUserQuery}"
-
-Current mind map structure: ${getMindmapStructure()}
-
-Currently selected node: "${selectedNode ? selectedNode.topic : 'Root node'}"
-
-First, please provide a brief text overview of your modification suggestions, explaining how you will expand or improve the current mind map.
-Then after the text overview, provide the detailed modification instructions in JSON format.
-
-The JSON format requirements are as follows:
-[
-  {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content", "note": "(optional)Detailed explanation and supplementary information for second-level node 1"},
-    {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content", "note": "(optional)Detailed explanation for the third-level node"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "New content"},
-  {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content", "note": "(optional)Supplementary information for the child node"}
-  ]},
-  {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
-]
-
-For the note content, please be as detailed and professional as possible, providing rich background information, explanations, and examples.
-Note content can include multiple paragraphs with appropriate formatting.
-Please provide rich and detailed content, including multi-level node structures and detailed notes.
-
-Important: Please first provide a text overview, then the JSON format data.`
-    };
-    
-    const modificationPrompt = modificationPrompts[currentLang] || modificationPrompts.zh;
+    // 使用提示词模块生成修改提示词
+    const mindmapStructure = getMindmapStructure();
+    const selectedNodeTopic = selectedNode ? selectedNode.topic : '根节点';
+    const modificationPrompt = window.aiPrompts.getModificationPrompt(
+        currentLang, 
+        latestUserQuery, 
+        mindmapStructure, 
+        selectedNodeTopic
+    );
 
     // 在界面上显示加载状态
+    updateLoadingStatus(window.i18n.t('loading') || '处理中...');
     document.getElementById('loading').style.display = 'block';
     
     // 添加用户请求消息
@@ -1089,80 +1060,11 @@ Important: Please first provide a text overview, then the JSON format data.`
         let headers = {'Content-Type': 'application/json'};
         let messages = [];
         
-        const systemPrompts = {
-            zh: `你是一个强大的思维导图助手，既能帮助用户扩展和完善他们的思维导图，也能提供正常的对话回应和知识解答。
-
-在与用户的对话中，你有两种模式：
-1. 普通对话模式：回答用户问题，提供信息和知识
-2. 思维导图修改模式：提供修改建议的文字说明和JSON格式的具体修改指令
-
-【重要】只有当用户明确点击了"修改思维导图"按钮时，你才应该进入思维导图修改模式。在普通聊天中，即使用户询问关于思维导图的内容，也请用普通文本回答，不要输出JSON格式。
-
-对每个主要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
-
-当进入思维导图修改模式时：
-1. 首先提供一段文字，简要概述你的修改建议
-2. 然后提供JSON格式的详细修改指令，包含至少两层的节点结构（即子节点及其子节点），并为重要节点添加详细备注。
-
-JSON格式要求如下：
-[
-  {"action": "添加子节点", "topic": "一级节点内容", "children": [
-    {"topic": "二级节点1内容", "note": "（可选）对二级节点1的详细说明和补充信息"},
-    {"topic": "二级节点2内容", "children": [
-      {"topic": "三级节点内容", "note": "（可选）对三级节点的详细说明"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "新内容"},
-  {"action": "添加兄弟节点", "topic": "节点内容", "children": [
-    {"topic": "子节点内容", "note": "（可选）子节点的补充信息"}
-  ]},
-  {"action": "添加注释", "topic": "详细的注释内容，必须包含多段文本，提供深入解释、背景知识、使用案例等。注释应当至少包含3-5个段落，确保信息全面且有深度。"}
-]
-
-确保在思维导图修改模式中先提供文字概述，再提供JSON格式的具体修改指令。在普通对话模式中只使用正常文本回复。
-`,
-
-            en: `You are a powerful mind map assistant who can both help users expand and refine their mind maps, as well as provide normal conversational responses and knowledge.
-
-In your dialogue with users, you operate in two modes:
-1. Normal conversation mode: Answer questions, provide information and knowledge
-2. Mind map modification mode: Provide a text overview of your suggestions, followed by JSON-formatted specific modification instructions
-
-【IMPORTANT】Only when the user explicitly clicks the "Modify Mind Map" button should you enter mind map modification mode. In normal chat, even if the user asks about mind maps, please answer with normal text, not with JSON format.
-
-Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
-
-When in mind map modification mode:
-1. First provide a text paragraph that briefly summarizes your modification suggestions
-2. Then provide JSON-formatted detailed modification instructions, including at least two layers of node structure (i.e., child nodes and their child nodes), and add detailed notes for important nodes.
-
-IMPORTANT: Even in English conversations, you must use the exact Chinese action names in your JSON responses as shown below:
-[
-  {"action": "添加子节点", "topic": "First-level node content", "children": [
-    {"topic": "Second-level node 1 content", "note": "(optional)Detailed explanation and supplementary information for second-level node 1"},
-    {"topic": "Second-level node 2 content", "children": [
-      {"topic": "Third-level node content", "note": "(optional)Detailed explanation for the third-level node"}
-    ]}
-  ]},
-  {"action": "修改当前节点", "topic": "New content"},
-  {"action": "添加兄弟节点", "topic": "Node content", "children": [
-    {"topic": "Child node content", "note": "(optional)Supplementary information for the child node"}
-  ]},
-  {"action": "添加注释", "topic": "Detailed note content that must include multiple paragraphs, providing in-depth explanations, background knowledge, use cases, etc. The note should contain at least 3-5 paragraphs to ensure comprehensive and in-depth information."}
-]
-
-The action names MUST be in Chinese exactly as shown above: "添加子节点", "修改当前节点", "添加兄弟节点", "添加注释". 
-The content can be in English, but the action names must be in Chinese.
-
-Ensure that in mind map modification mode, you first provide a text overview, then the JSON-formatted specific instructions. In conversation mode, use only normal text responses.
-`
-        };
-        
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 { role: 'user', content: modificationPrompt }
             ];
             
@@ -1176,7 +1078,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             };
             
             console.log('发送OpenAI修改请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('修改请求响应:', data);
             
             // 处理响应
@@ -1213,7 +1115,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             headers['Authorization'] = `Bearer ${apiKey}`;
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 { role: 'user', content: modificationPrompt }
             ];
             
@@ -1227,7 +1129,7 @@ Ensure that in mind map modification mode, you first provide a text overview, th
             };
             
             console.log('发送Deepseek修改请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('修改请求响应:', data);
             
             // 处理响应
@@ -1375,63 +1277,19 @@ async function requestContentExpansion() {
         return;
     }
     
-    // 构建特定的提示词，要求AI扩展选中节点的内容
+    // 使用提示词模块生成扩展提示词
     const currentLang = window.i18n ? window.i18n.getCurrentLang() : 'zh';
+    const mindmapStructure = getMindmapStructure();
+    const selectedNodeTopic = selectedNode ? selectedNode.topic : '根节点';
     
-    // 中英文提示词模板
-    const expansionPrompts = {
-        zh: `【思维导图内容扩展】请根据我的思维导图和当前选中的节点，提供详细的内容扩展。
-
-当前思维导图结构: ${getMindmapStructure()}
-
-当前选中的节点是: "${selectedNode ? selectedNode.topic : '根节点'}"
-
-请沿着选中节点的思路继续深入扩展内容。提供与该节点主题相关的深入分析、详细信息或新的相关概念。
-
-请先用文字简要概述你的扩展建议，说明你将如何深入当前节点的内容。
-然后在文字概述后面，提供JSON格式的详细修改指令。
-
-JSON格式要求如下:
-[
-  {"action": "添加子节点", "topic": "扩展主题1", "children": [
-    {"topic": "子主题1.1", "note": "对子主题1.1的详细说明和补充信息"},
-    {"topic": "子主题1.2", "children": [
-      {"topic": "子主题1.2.1", "note": "对子主题1.2.1的详细说明和补充信息"}
-    ]}
-  ]},
-  {"action": "添加注释", "topic": "详细的注释内容，提供对当前节点主题的深入解释。"}
-]
-
-请尽量提供丰富详细的内容，包括多级节点结构和深入的解释说明。`,
-
-        en: `【MIND MAP CONTENT EXPANSION】Based on my mind map and the currently selected node, please provide detailed content expansion.
-
-Current mind map structure: ${getMindmapStructure()}
-
-Currently selected node: "${selectedNode ? selectedNode.topic : 'Root node'}"
-
-Please continue to expand the content along the direction of the selected node. Provide in-depth analysis, detailed information, or new related concepts relevant to this node's topic.
-
-First, please provide a brief text overview of your expansion suggestions, explaining how you will deepen the content of the current node.
-Then after the text overview, provide the detailed modification instructions in JSON format.
-
-The JSON format requirements are as follows:
-[
-  {"action": "添加子节点", "topic": "Expansion topic 1", "children": [
-    {"topic": "Subtopic 1.1", "note": "(optional)Detailed explanation and supplementary information for subtopic 1.1"},
-    {"topic": "Subtopic 1.2", "children": [
-      {"topic": "Subtopic 1.2.1", "note": "(optional)Detailed explanation for the subtopic 1.2.1"}
-    ]}
-  ]},
-  {"action": "添加注释", "topic": "Detailed note content providing in-depth explanation of the current node's topic."}
-]
-
-Please provide rich and detailed content, including multi-level node structures and in-depth explanations. Each important node should include detailed note content.`
-    };
-    
-    const expansionPrompt = expansionPrompts[currentLang] || expansionPrompts.zh;
+    const expansionPrompt = window.aiPrompts.getExpansionPrompt(
+        currentLang, 
+        mindmapStructure, 
+        selectedNodeTopic
+    );
     
     // 在界面上显示加载状态
+    updateLoadingStatus(window.i18n.t('loading') || '处理中...');
     document.getElementById('loading').style.display = 'block';
     
     // 添加用户请求消息
@@ -1447,51 +1305,11 @@ Please provide rich and detailed content, including multi-level node structures 
         let headers = {'Content-Type': 'application/json'};
         let messages = [];
         
-        const systemPrompts = {
-            zh: `你是一个强大的思维导图助手，能够帮助用户扩展和深化思维导图中的内容。
-请根据用户选择的节点，提供相关的深入内容、概念和解释。
-
-对每个主要节点添加详细注释是非常重要的。注释能提供深层次信息、背景知识、使用场景和扩展阅读，大大增强思维导图的价值。请确保为每个关键节点添加内容丰富的注释。
-
-当用户请求扩展内容时，请提供JSON格式的节点修改建议，遵循以下格式：
-
-[
-  {"action": "添加子节点", "topic": "扩展主题", "children": [
-    {"topic": "子主题1", "note": "(可选)对子主题1的详细说明和补充信息"},
-    {"topic": "子主题2", "children": [
-      {"topic": "子子主题", "note": "(可选)对子子主题的详细说明"}
-    ]}
-  ]},
-  {"action": "添加注释", "topic": "详细的注释内容，提供深入解释。"}
-]
-
-请确保你的建议与用户选择的节点主题相关，并提供有价值的内容扩展。每个重要节点都应包含详细的注释内容。`,
-
-            en: `You are a powerful mind map assistant who can help users expand and deepen the content in their mind maps.
-Based on the user's selected node, provide related in-depth content, concepts, and explanations.
-
-【NOTE IMPORTANCE】Adding detailed notes to each major node is extremely important. Notes provide deeper information, background knowledge, use cases and extended reading, greatly enhancing the value of the mind map. Please ensure that every key node has rich, informative notes.
-
-When the user requests content expansion, provide node modification suggestions in JSON format, following this structure:
-
-[
-  {"action": "添加子节点", "topic": "Expansion topic", "children": [
-    {"topic": "Subtopic 1", "note": "(optional)Detailed explanation and supplementary information for subtopic 1"},
-    {"topic": "Subtopic 2", "children": [
-      {"topic": "Sub-subtopic", "note": "(optional)Detailed explanation for the sub-subtopic"}
-    ]}
-  ]},
-  {"action": "添加注释", "topic": "Detailed note content providing in-depth explanation."}
-]
-
-Ensure your suggestions are relevant to the user's selected node topic and provide valuable content expansion. Every important node should include detailed note content.`
-        };
-        
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getExpansionSystemPrompt(currentLang) },
                 { role: 'user', content: expansionPrompt }
             ];
             
@@ -1505,7 +1323,7 @@ Ensure your suggestions are relevant to the user's selected node topic and provi
             };
             
             console.log('发送OpenAI内容扩展请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('内容扩展请求响应:', data);
             
             // 处理响应
@@ -1529,7 +1347,7 @@ Ensure your suggestions are relevant to the user's selected node topic and provi
             headers['Authorization'] = `Bearer ${apiKey}`;
             
             messages = [
-                { role: 'system', content: systemPrompts[currentLang] },
+                { role: 'system', content: window.aiPrompts.getExpansionSystemPrompt(currentLang) },
                 { role: 'user', content: expansionPrompt }
             ];
             
@@ -1543,7 +1361,7 @@ Ensure your suggestions are relevant to the user's selected node topic and provi
             };
             
             console.log('发送Deepseek内容扩展请求...');
-            const data = await window.openaiApi.createCompletion(requestData);
+            const data = await createCompletionWithRetry(requestData, aiService);
             console.log('内容扩展请求响应:', data);
             
             // 处理响应

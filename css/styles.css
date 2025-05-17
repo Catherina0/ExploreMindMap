@@ -330,6 +330,23 @@ body {
     backdrop-filter: blur(4px);
 }
 
+/* 重试指示器样式 */
+#loading.retrying {
+    background-color: rgba(255, 165, 0, 0.7); /* 橙色背景 */
+}
+
+.retry-indicator {
+    font-weight: bold;
+    color: #ff4500; /* 亮红色 */
+    animation: pulse 1.5s infinite; /* 脉动动画 */
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
 /* 按钮变体 */
 .btn-secondary {
     background-color: transparent;

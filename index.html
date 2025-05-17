@@ -71,20 +71,51 @@
                 }
                 
                 try {
-                    console.log('请求头:', cleanHeaders);
+                    console.log('发送API请求:', {
+                        endpoint: endpoint,
+                        headers: cleanHeaders,
+                        // 排除敏感信息，只显示结构
+                        dataStructure: {
+                            hasModel: !!data.model,
+                            hasMessages: !!data.messages,
+                            messagesCount: data.messages ? data.messages.length : 0,
+                            temperature: data.temperature,
+                            max_tokens: data.max_tokens
+                        }
+                    });
+                    
+                    // 设置请求超时时间（60秒）
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+                    
+                    console.time('API请求耗时');
                     const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: cleanHeaders,
-                        body: JSON.stringify(data)
+                        body: JSON.stringify(data),
+                        signal: controller.signal
                     });
+                    console.timeEnd('API请求耗时');
+                    
+                    // 清除超时
+                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
                         const errorData = await response.text();
+                        console.error('API返回错误状态码:', response.status, errorData);
                         throw new Error(`API请求失败: ${response.status} ${errorData}`);
                     }
                     
-                    return await response.json();
+                    const jsonResponse = await response.json();
+                    console.log('API请求成功，响应大小:', new TextEncoder().encode(JSON.stringify(jsonResponse)).length, '字节');
+                    return jsonResponse;
                 } catch (error) {
+                    // 检查是否是超时错误
+                    if (error.name === 'AbortError') {
+                        console.error('API请求超时');
+                        throw new Error('API请求超时，请稍后重试');
+                    }
+                    
                     console.error('API请求错误:', error);
                     throw error;
                 }
@@ -442,6 +473,7 @@
     <script src="js/latex-editor.js"></script>
     <!-- 添加思维导图修改模块（必须在ai-assistant.js之前加载） -->
     <script src="js/mindmap-modifier.js"></script>
+    <script src="js/ai-prompts.js"></script>
     <script src="js/ai-assistant.js"></script>
     <!-- 第三步：加载启动核心 -->
     <script src="js/core.js"></script>

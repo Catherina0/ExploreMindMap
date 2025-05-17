@@ -224,7 +224,14 @@
         <div class="chat-container">
             <!-- 聊天头部 -->
             <div class="chat-header">
-                <span data-i18n="chat_header">AI思维导图助手</span>
+                <div class="chat-header-left">
+                    <span data-i18n="chat_header">AI思维导图助手</span>
+                </div>
+                <div class="chat-header-right">
+                    <button id="ai_toggle" class="btn btn-secondary btn-icon">
+                        <span data-i18n="ai_toggle">对话模式</span>
+                    </button>
+                </div>
             </div>
             
             <!-- 聊天控制区域 -->
@@ -233,10 +240,7 @@
                     <i class="fas fa-plus"></i>
                     <span data-i18n="new_conversation">新对话</span>
                 </button>
-                <button id="ai_toggle" class="btn btn-secondary btn-icon">
-                    <i class="fas fa-robot"></i>
-                    <span data-i18n="ai_toggle">AI助手</span>
-                </button>
+                
                 <button id="modify_mindmap_chat" class="btn btn-secondary btn-icon">
                     <i class="fas fa-magic"></i>
                     <span data-i18n="modify_map">修改导图</span>
@@ -432,6 +436,8 @@
     <script src="js/image-export.js"></script>
     <script src="js/menu-handler.js"></script>
     <script src="js/latex-editor.js"></script>
+    <!-- 添加思维导图修改模块（必须在ai-assistant.js之前加载） -->
+    <script src="js/mindmap-modifier.js"></script>
     <script src="js/ai-assistant.js"></script>
     <!-- 第三步：加载启动核心 -->
     <script src="js/core.js"></script>

@@ -603,7 +603,7 @@ function addMessage(sender, text, modifications = null) {
         // 应用按钮
         const applyButton = document.createElement('button');
         applyButton.className = 'apply-button';
-        applyButton.textContent = '应用修改';
+        applyButton.textContent = window.i18n.t('apply_modifications');
         applyButton.onclick = function() {
             applyAISuggestions(modToUse);
         };
@@ -611,9 +611,9 @@ function addMessage(sender, text, modifications = null) {
         // 拒绝按钮
         const rejectButton = document.createElement('button');
         rejectButton.className = 'reject-button';
-        rejectButton.textContent = '拒绝修改';
+        rejectButton.textContent = window.i18n.t('reject_modifications');
         rejectButton.onclick = function() {
-            addMessage('ai', '已拒绝应用修改建议。');
+            addMessage('ai', window.i18n.t('modification_rejected'));
         };
         
         // 添加按钮到控制区

@@ -128,7 +128,12 @@ const translations = {
         'new_mindmap_created': '新思维导图已创建',
         'new_mindmap_error': '创建失败: {0}',
         'generating_image': '正在生成图片...',
-        'image_export_error': '导出图片失败: {0}'
+        'image_export_error': '导出图片失败: {0}',
+        
+        // AI修改相关按钮
+        'apply_modifications': '应用修改',
+        'reject_modifications': '拒绝修改',
+        'modification_rejected': '已拒绝应用修改建议。'
     },
     en: {
         // Common UI elements
@@ -252,7 +257,12 @@ const translations = {
         'new_mindmap_created': 'New mind map created',
         'new_mindmap_error': 'Creation failed: {0}',
         'generating_image': 'Generating image...',
-        'image_export_error': 'Failed to export image: {0}'
+        'image_export_error': 'Failed to export image: {0}',
+        
+        // AI modification related buttons
+        'apply_modifications': 'Apply Changes',
+        'reject_modifications': 'Reject Changes',
+        'modification_rejected': 'Suggested modifications have been rejected.'
     }
 };
 

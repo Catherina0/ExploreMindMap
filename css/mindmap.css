@@ -13,6 +13,9 @@
     position: relative;
     background: var(--bg-color);
     overflow: hidden;
+    width: 100%;
+    height: 100%;
+    padding: 50px;
 }
 
 /* 缩放控制器 */
@@ -120,47 +123,6 @@
 /* 确保节点样式增加 */
 jmnode {
     position: relative;
-}
-
-/* 备注指示器样式 */
-.note-indicator {
-    position: absolute;
-    bottom: 0px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 20px;
-    background-color: transparent;
-    color: black;
-    border-radius: 50%;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: none;
-    z-index: 100;
-    transition: all var(--transition-fast);
-    border: none;
-}
-
-.note-indicator:hover {
-    transform: translateX(-50%) scale(1.2);
-    background-color: rgba(0, 0, 0, 0.05);
-    box-shadow: none;
-}
-
-/* 适应不同主题的文本颜色 - 统一为黑色 */
-.theme-primary .note-indicator svg,
-.theme-danger .note-indicator svg,
-.theme-success .note-indicator svg,
-.theme-warning .note-indicator svg,
-.note-indicator svg {
-    fill: black !important;
-}
-
-/* 节点样式 */
-jmnode {
     background-color: var(--bg-color);
     color: var(--text-color);
     border-radius: var(--radius-md);
@@ -172,7 +134,18 @@ jmnode {
     min-height: 30px;
     margin-bottom: 15px;
     padding-bottom: 15px;
-    position: relative;
+    
+    /* 允许显示长文本的关键样式 */
+    white-space: normal !important; /* 允许文本自动换行 */
+    overflow: visible !important; /* 确保内容不会被截断 */
+    text-overflow: clip !important; /* 禁用省略号 */
+    word-wrap: break-word !important; /* 允许长单词自动换行 */
+    max-width: 450px !important; /* 设置最大宽度限制 */
+    min-width: 120px; /* 设置最小宽度 */
+    width: auto !important; /* 自动适应内容宽度 */
+    height: auto !important; /* 自动适应内容高度 */
+    line-height: 1.5; /* 增加行高改善可读性 */
+    text-align: center !important; /* 文本居中显示 */
 }
 
 jmnode:hover {
@@ -302,12 +275,55 @@ jmexpander:hover {
     background-color: #fee2e2;
 }
 
-/* 画布样式 */
-#jsmind_container {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: var(--bg-color);
+/* 备注指示器样式 */
+.note-indicator {
+    position: absolute;
+    bottom: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    color: black;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: none;
+    z-index: 100;
+    transition: all var(--transition-fast);
+    border: none;
+}
+
+.note-indicator:hover {
+    transform: translateX(-50%) scale(1.2);
+    background-color: rgba(0, 0, 0, 0.05);
+    box-shadow: none;
+}
+
+/* 适应不同主题的文本颜色 - 统一为黑色 */
+.theme-primary .note-indicator svg,
+.theme-danger .note-indicator svg,
+.theme-success .note-indicator svg,
+.theme-warning .note-indicator svg,
+.note-indicator svg {
+    fill: black !important;
+}
+
+/* 调整具有备注的节点的样式 */
+jmnode.has-note-mark {
+    padding-bottom: 25px; /* 增加底部内边距 */
+    min-height: 35px; /* 增加最小高度 */
+}
+
+/* 修复可能的jsMind默认样式 */
+.jsmind-inner jmnode {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    text-align: center !important;
 }
 
 /* Dark mode styles */
@@ -430,10 +446,4 @@ html[lang="en"] .toolbar .btn {
 
 .azure-settings {
     display: none;
-}
-
-/* 调整具有备注的节点的样式 */
-jmnode.has-note-mark {
-    padding-bottom: 25px; /* 增加底部内边距 */
-    min-height: 35px; /* 增加最小高度 */
 }

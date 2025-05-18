@@ -154,11 +154,14 @@ function initJsMind() {
             view: {
                 engine: 'canvas',
                 hmargin: 100,
-                vmargin: 50,
+                vmargin: 100,
                 line_width: 2,
                 line_color: '#555',
                 draggable: true,
-                hide_scrollbars_when_draggable: true
+                hide_scrollbars_when_draggable: true,
+                node_overflow: 'wrap',
+                node_width_limit: 300,
+                node_max_width: 350
             }
         };
         

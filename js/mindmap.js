@@ -459,57 +459,20 @@ function addNoteMarker(node) {
             return;
         }
         
-        // 获取节点内容元素
-        let topicElement = nodeElement.querySelector('.topic');
-        
-        // 如果找不到.topic，尝试查找其他可能的内容元素
-        if (!topicElement) {
-            topicElement = nodeElement.firstElementChild || nodeElement;
-        }
-        
-        if (!topicElement) {
-            console.warn('找不到节点内容元素');
-            return;
-        }
+        // 给节点添加特殊类标记，用于CSS样式控制
+        nodeElement.classList.add('has-note-mark');
         
         // 创建备注指示器按钮
         const noteIndicator = document.createElement('span');
         noteIndicator.className = 'note-indicator';
         noteIndicator.setAttribute('title', '查看备注');
         
-        // 设置样式
-        Object.assign(noteIndicator.style, {
-            marginLeft: '4px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            verticalAlign: 'middle',
-            width: '18px',
-            height: '18px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s ease',
-            position: 'relative'
-        });
-        
-        // 添加HTML图标作为备用
+        // 添加HTML图标作为备用，确保填充颜色为黑色
         noteIndicator.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="fill:#333;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" style="fill:black;">
                 <path d="M21 6v14c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h1V2h2v2h8V2h2v2h1c1.1 0 2 .9 2 2zM5 8h14V6H5v2zm14 12V10H5v10h14z"></path>
             </svg>
         `;
-        
-        // 悬停在图标上时改变样式
-        noteIndicator.addEventListener('mouseover', function() {
-            this.style.backgroundColor = 'rgba(0, 0, 0, 0.1)';
-            this.style.transform = 'scale(1.1)';
-        });
-        
-        noteIndicator.addEventListener('mouseout', function() {
-            this.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
-            this.style.transform = 'scale(1)';
-        });
         
         // 点击备注图标时显示备注
         noteIndicator.addEventListener('click', function(e) {
@@ -524,8 +487,8 @@ function addNoteMarker(node) {
             showFloatingNoteWindow(node);
         });
         
-        // 将指示器添加到节点内容后
-        topicElement.appendChild(noteIndicator);
+        // 将指示器添加到节点元素而不是内容元素
+        nodeElement.appendChild(noteIndicator);
     } catch (e) {
         console.error('添加备注标记失败:', e);
     }

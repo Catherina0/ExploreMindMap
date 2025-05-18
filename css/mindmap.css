@@ -124,31 +124,39 @@ jmnode {
 
 /* 备注指示器样式 */
 .note-indicator {
-    margin-left: 4px;
-    cursor: pointer;
-    display: inline-flex;
+    position: absolute;
+    bottom: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    color: black;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    vertical-align: middle;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-    position: relative;
+    cursor: pointer;
+    box-shadow: none;
+    z-index: 100;
+    transition: all var(--transition-fast);
+    border: none;
 }
 
 .note-indicator:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-    transform: scale(1.1);
+    transform: translateX(-50%) scale(1.2);
+    background-color: rgba(0, 0, 0, 0.05);
+    box-shadow: none;
 }
 
 /* 适应不同主题的文本颜色 - 统一为黑色 */
 .theme-primary .note-indicator svg,
 .theme-danger .note-indicator svg,
 .theme-success .note-indicator svg,
-.theme-warning .note-indicator svg {
-    fill: #333 !important;
+.theme-warning .note-indicator svg,
+.note-indicator svg {
+    fill: black !important;
 }
 
 /* 节点样式 */
@@ -161,6 +169,10 @@ jmnode {
     font-size: 14px;
     border: 1px solid var(--border-color);
     transition: all var(--transition-fast);
+    min-height: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    position: relative;
 }
 
 jmnode:hover {
@@ -206,31 +218,6 @@ jmexpander {
 jmexpander:hover {
     background-color: var(--primary-light);
     border-color: var(--primary-color);
-}
-
-/* 注释指示器 */
-.note-indicator {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 18px;
-    height: 18px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    z-index: 10;
-    transition: all var(--transition-fast);
-}
-
-.note-indicator:hover {
-    transform: scale(1.1);
-    background-color: var(--primary-dark);
 }
 
 /* 注释提示框 */
@@ -443,4 +430,10 @@ html[lang="en"] .toolbar .btn {
 
 .azure-settings {
     display: none;
+}
+
+/* 调整具有备注的节点的样式 */
+jmnode.has-note-mark {
+    padding-bottom: 25px; /* 增加底部内边距 */
+    min-height: 35px; /* 增加最小高度 */
 }

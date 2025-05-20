@@ -352,7 +352,7 @@ function initToolbar() {
     
     // 添加高级功能按钮
     advancedGroup.appendChild(createButton('latex_button', 'formula', 'formula', openLatexEditor));
-    advancedGroup.appendChild(createButton('note_button', 'note', 'note', openNoteEditor));
+    advancedGroup.appendChild(createButton('add_note', 'note', 'note', openNoteEditor));
     // advancedGroup.appendChild(createButton('relation_button', 'relation_line', 'relation_line', startRelationLine));
     // advancedGroup.appendChild(createButton('summary_button', 'summary', 'summary', openSummaryEditor));
     
@@ -804,7 +804,7 @@ function openNoteEditor() {
     
     // 设置当前值并显示编辑器
     noteInput.value = currentNote;
-    noteEditor.style.display = 'block';
+    noteEditor.classList.add('show');  // 使用 classList.add 替代 style.display
     noteInput.focus();
 }
 

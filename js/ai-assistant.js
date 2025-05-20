@@ -784,7 +784,7 @@ async function processAIRequest(query) {
                 model: 'gpt-3.5-turbo',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送OpenAI请求...');
@@ -802,8 +802,8 @@ async function processAIRequest(query) {
                      msg.content.includes('Please modify the mind map based on my needs and context'))
                 );
                 
-                // 仅当AI助手开启并且是修改请求时才尝试解析JSON
-                if (aiAssistantEnabled && isModificationRequest) {
+                // 仅当是修改请求时才尝试解析JSON
+                if (isModificationRequest) {
                     // 使用新模块解析修改建议
                     const parseResult = parseAIResponseJSON(content);
                     
@@ -814,10 +814,12 @@ async function processAIRequest(query) {
                         addMessage('ai', `无法解析修改建议，AI返回的内容可能不是有效的JSON格式。以下是原始响应:\n\n${content}`);
                     }
                 } else {
-                    console.log('非思维导图修改请求或AI助手未启用，不尝试提取JSON');
-                    // 普通对话响应，直接显示
+                    // 普通对话模式，直接添加消息
                     addMessage('ai', content);
+                    console.log('非思维导图修改请求，不尝试提取JSON');
                 }
+            } else {
+                throw new Error('AI响应缺少必要数据');
             }
         } else if (aiService === 'azure') {
             // 获取Azure设置
@@ -842,7 +844,7 @@ async function processAIRequest(query) {
                 headers: headers,
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送Azure请求...');
@@ -860,8 +862,8 @@ async function processAIRequest(query) {
                      msg.content.includes('Please modify the mind map based on my needs and context'))
                 );
                 
-                // 仅当AI助手开启并且是修改请求时才尝试解析JSON
-                if (aiAssistantEnabled && isModificationRequest) {
+                // 仅当是修改请求时才尝试解析JSON
+                if (isModificationRequest) {
                     // 使用新模块解析修改建议
                     const parseResult = parseAIResponseJSON(content);
                     
@@ -872,9 +874,9 @@ async function processAIRequest(query) {
                         addMessage('ai', `无法解析修改建议，AI返回的内容可能不是有效的JSON格式。以下是原始响应:\n\n${content}`);
                     }
                 } else {
-                    console.log('非思维导图修改请求，不尝试提取JSON');
-                    // 普通对话响应，直接显示
+                    // 普通对话模式，直接添加消息
                     addMessage('ai', content);
+                    console.log('非思维导图修改请求，不尝试提取JSON');
                 }
             }
             
@@ -893,7 +895,7 @@ async function processAIRequest(query) {
                 model: 'deepseek-chat',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送Deepseek请求...');
@@ -991,7 +993,7 @@ async function requestMindmapModification() {
     
     // 检查是否有选中的节点
     if (!selectedNode) {
-        addMessage('ai', window.i18n.t('select_node_for_modify'));
+        alert(window.i18n.t('select_node_for_modify'));
         return;
     }
     
@@ -1074,7 +1076,7 @@ async function requestMindmapModification() {
                 model: 'gpt-4o',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送OpenAI修改请求...');
@@ -1125,7 +1127,7 @@ async function requestMindmapModification() {
                 model: 'deepseek-chat',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送Deepseek修改请求...');
@@ -1309,7 +1311,7 @@ async function requestContentExpansion() {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
             messages = [
-                { role: 'system', content: window.aiPrompts.getExpansionSystemPrompt(currentLang) },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 { role: 'user', content: expansionPrompt }
             ];
             
@@ -1319,7 +1321,7 @@ async function requestContentExpansion() {
                 model: 'gpt-4o',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送OpenAI内容扩展请求...');
@@ -1347,7 +1349,7 @@ async function requestContentExpansion() {
             headers['Authorization'] = `Bearer ${apiKey}`;
             
             messages = [
-                { role: 'system', content: window.aiPrompts.getExpansionSystemPrompt(currentLang) },
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
                 { role: 'user', content: expansionPrompt }
             ];
             
@@ -1357,7 +1359,7 @@ async function requestContentExpansion() {
                 model: 'deepseek-chat',
                 messages: messages,
                 temperature: 0.7,
-                max_tokens: 2000
+                max_tokens: 8190
             };
             
             console.log('发送Deepseek内容扩展请求...');

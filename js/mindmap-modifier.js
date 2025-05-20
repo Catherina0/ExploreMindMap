@@ -121,7 +121,25 @@ function applyAISuggestions(modifications) {
                 case '修改当前节点':
                     const oldTopic = nodeObj.topic;
                     console.log(`修改节点: ID=${nodeObj.id}, 旧内容="${oldTopic}", 新内容="${mod.topic}"`);
-                    jm.update_node(nodeObj.id, mod.topic);
+                    
+                    // 特殊处理根节点
+                    if (nodeObj.id === 'root') {
+                        console.log('正在修改根节点内容');
+                        // 确保根节点的其他属性保持不变
+                        const rootData = {
+                            id: 'root',
+                            topic: mod.topic,
+                            direction: nodeObj.direction || 'right',
+                            expanded: true,
+                            children: nodeObj.children || []
+                        };
+                        // 更新根节点
+                        jm.update_node('root', rootData.topic);
+                        console.log('根节点修改完成:', rootData);
+                    } else {
+                        // 非根节点的普通更新
+                        jm.update_node(nodeObj.id, mod.topic);
+                    }
                     modificationLog.push(`- 修改 #${index + 1}: 将节点"${oldTopic}"修改为"${mod.topic}"`);
                     break;
                     

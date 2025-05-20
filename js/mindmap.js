@@ -137,7 +137,7 @@ function initToolbar() {
             'expand_all': 'fa-expand-alt',
             'collapse_all': 'fa-compress-alt',
             'latex_button': 'fa-square-root-alt',
-            'note_button': 'fa-sticky-note',
+            'add_note': 'fa-sticky-note',
             'relation_button': 'fa-link',
             'summary_button': 'fa-file-alt',
             'save_map': 'fa-save',

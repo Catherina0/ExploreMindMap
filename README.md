@@ -16,7 +16,7 @@
 
 1. 克隆或下载本仓库到本地
 2. 使用本地服务器打开 `index.html` 文件（例如VS Code的Live Server扩展）
-3. 在界面中输入您的OpenAI或Deepseek API密钥
+3. 在界面中输入您的OpenAI或Deepseek API密钥（推荐DeepSeek）
 
 ## 使用方法
 

@@ -138,7 +138,7 @@ function applyAISuggestions(modifications) {
                         console.log('根节点修改完成:', rootData);
                     } else {
                         // 非根节点的普通更新
-                        jm.update_node(nodeObj.id, mod.topic);
+                    jm.update_node(nodeObj.id, mod.topic);
                     }
                     modificationLog.push(`- 修改 #${index + 1}: 将节点"${oldTopic}"修改为"${mod.topic}"`);
                     break;

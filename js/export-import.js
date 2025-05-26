@@ -452,8 +452,589 @@ function parseMDToMindmap(markdown) {
     return mindmapData;
 }
 
+// 导出问题反馈日志
+function exportFeedbackLog() {
+    try {
+        console.log('开始导出问题反馈日志');
+        
+        // 手动收集当前运行时错误
+        collectRuntimeErrors();
+        
+        // 收集信息
+        const feedbackData = collectFeedbackData();
+        
+        // 格式化为可读性好的文本
+        const formattedLog = formatFeedbackLog(feedbackData);
+        
+        // 创建并下载日志文件
+        const blob = new Blob([formattedLog], {type: "text/plain;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `mindmap-feedback-${timestamp}.log`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+        
+        console.log('成功导出问题反馈日志');
+    } catch (e) {
+        console.error('导出问题反馈日志失败:', e);
+        alert('导出失败: ' + e.message);
+        
+        // 尝试保存一个最小化的错误信息
+        try {
+            const minimalErrorLog = `
+======= 最小化错误日志 =======
+时间: ${new Date().toISOString()}
+错误: ${e.message}
+堆栈: ${e.stack || '未知'}
+浏览器: ${navigator.userAgent}
+`;
+            const errorBlob = new Blob([minimalErrorLog], {type: "text/plain;charset=utf-8"});
+            const errorUrl = URL.createObjectURL(errorBlob);
+            
+            const errorLink = document.createElement('a');
+            errorLink.href = errorUrl;
+            errorLink.download = `error-log-${Date.now()}.txt`;
+            document.body.appendChild(errorLink);
+            errorLink.click();
+            
+            setTimeout(function() {
+                document.body.removeChild(errorLink);
+                window.URL.revokeObjectURL(errorUrl);
+            }, 0);
+        } catch (innerError) {
+            console.error('保存最小化错误日志失败:', innerError);
+        }
+    }
+}
+
+// 手动收集当前运行时错误
+function collectRuntimeErrors() {
+    try {
+        // 收集任何可能的JavaScript运行时错误
+        if (!window.consoleErrors) {
+            window.consoleErrors = [];
+        }
+        
+        if (!window.uncaughtErrors) {
+            window.uncaughtErrors = [];
+        }
+        
+        // 尝试检测当前页面状态和变量
+        const currentState = {
+            timestamp: new Date().toISOString(),
+            message: '手动收集的页面状态',
+            type: 'manual_check'
+        };
+        
+        // 检测jsMind实例
+        if (typeof jm === 'undefined' || !jm) {
+            currentState.jsmindError = 'jsMind实例不存在或未初始化';
+        } else if (!jm.mind) {
+            currentState.jsmindError = 'jsMind实例存在但mind属性不存在';
+        }
+        
+        // 检测DOM元素
+        try {
+            const container = document.getElementById('jsmind_container');
+            if (!container) {
+                currentState.domError = 'jsmind_container元素不存在';
+            }
+            
+            const chatContainer = document.querySelector('.chat-container');
+            if (!chatContainer) {
+                if (!currentState.domError) currentState.domError = '';
+                currentState.domError += ' chat-container元素不存在';
+            }
+        } catch (e) {
+            currentState.domError = `检测DOM时出错: ${e.message}`;
+        }
+        
+        // 添加到错误日志
+        window.consoleErrors.push(currentState);
+        
+        console.log('已手动收集运行时错误信息');
+    } catch (e) {
+        console.error('手动收集运行时错误失败:', e);
+    }
+}
+
+// 收集反馈所需的所有信息
+function collectFeedbackData() {
+    const data = {
+        timestamp: new Date().toISOString(),
+        mindmap: null,
+        chatHistory: [],
+        apiStats: [],
+        browserInfo: {},
+        sessionInfo: {},
+        networkInfo: {},
+        chatModeHistory: [], // 添加聊天模式历史
+        osInfo: {}, // 添加操作系统信息
+        errorLogs: [] // 添加错误日志
+    };
+    
+    // 收集思维导图数据
+    try {
+        if (jm && typeof jm.get_data === 'function') {
+            data.mindmap = jm.get_data();
+        }
+    } catch (e) {
+        console.error('收集思维导图数据失败:', e);
+        data.mindmapError = e.message;
+    }
+    
+    // 收集对话历史
+    try {
+        // 查找聊天消息容器
+        const chatMessages = document.getElementById('chat_messages');
+        if (chatMessages) {
+            // 从DOM中提取对话
+            const messages = chatMessages.querySelectorAll('.message');
+            messages.forEach(msg => {
+                const isAi = msg.classList.contains('ai-message');
+                const text = msg.textContent.trim();
+                const timestamp = msg.getAttribute('data-timestamp') || '';
+                
+                data.chatHistory.push({
+                    type: isAi ? 'ai' : 'user',
+                    text: text,
+                    timestamp: timestamp
+                });
+            });
+        }
+        
+        // 如果全局有保存对话历史的变量，也一并收集
+        if (window.aiAssistant && window.aiAssistant.chatHistory) {
+            data.chatHistoryFromMemory = window.aiAssistant.chatHistory;
+        }
+    } catch (e) {
+        console.error('收集对话历史失败:', e);
+        data.chatHistoryError = e.message;
+    }
+    
+    // 收集API调用统计
+    try {
+        // 如果存在API调用统计数据则收集
+        if (window.apiStats) {
+            data.apiStats = window.apiStats;
+        } else {
+            // 尝试从console记录中提取相关信息
+            if (window.apiRequestTimes) {
+                data.apiStats = window.apiRequestTimes;
+            }
+        }
+        
+        // 从localStorage中查找可能的API状态信息
+        const storedApiStatus = localStorage.getItem('api_status');
+        if (storedApiStatus) {
+            try {
+                data.storedApiStatus = JSON.parse(storedApiStatus);
+            } catch (e) {
+                data.storedApiStatus = storedApiStatus;
+            }
+        }
+    } catch (e) {
+        console.error('收集API统计数据失败:', e);
+        data.apiStatsError = e.message;
+    }
+    
+    // 收集浏览器信息
+    try {
+        data.browserInfo = {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            vendor: navigator.vendor,
+            cookieEnabled: navigator.cookieEnabled,
+            doNotTrack: navigator.doNotTrack,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            devicePixelRatio: window.devicePixelRatio
+        };
+    } catch (e) {
+        console.error('收集浏览器信息失败:', e);
+        data.browserInfoError = e.message;
+    }
+    
+    // 收集会话和模式信息
+    try {
+        data.sessionInfo = {
+            currentTime: new Date().toString(),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            locale: Intl.DateTimeFormat().resolvedOptions().locale
+        };
+        
+        // 获取当前AI对话模式
+        const aiToggleBtn = document.getElementById('ai_toggle');
+        if (aiToggleBtn) {
+            data.sessionInfo.currentAiMode = aiToggleBtn.textContent.trim();
+        }
+        
+        // 获取选择的AI服务类型
+        const aiService = document.getElementById('ai_service');
+        if (aiService) {
+            data.sessionInfo.selectedAiService = aiService.value;
+        }
+        
+        // 获取当前语言设置
+        if (window.i18n && typeof window.i18n.getCurrentLanguage === 'function') {
+            data.sessionInfo.currentLanguage = window.i18n.getCurrentLanguage();
+        } else {
+            const currentLangSpan = document.getElementById('current_lang');
+            if (currentLangSpan) {
+                data.sessionInfo.displayedLanguage = currentLangSpan.textContent.trim();
+            }
+        }
+    } catch (e) {
+        console.error('收集会话信息失败:', e);
+        data.sessionInfoError = e.message;
+    }
+    
+    // 收集网络信息
+    try {
+        // 基本连接信息
+        data.networkInfo = {
+            online: navigator.onLine
+        };
+        
+        // 如果浏览器支持NetworkInformation API
+        if (navigator.connection) {
+            data.networkInfo.connection = {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink,
+                rtt: navigator.connection.rtt,
+                saveData: navigator.connection.saveData
+            };
+        }
+        
+        // 收集性能数据
+        if (window.performance) {
+            const perfData = window.performance.timing;
+            if (perfData) {
+                data.networkInfo.performance = {
+                    domainLookupTime: perfData.domainLookupEnd - perfData.domainLookupStart,
+                    connectTime: perfData.connectEnd - perfData.connectStart,
+                    responseTime: perfData.responseEnd - perfData.responseStart,
+                    domProcessingTime: perfData.domComplete - perfData.domLoading,
+                    pageLoadTime: perfData.loadEventEnd - perfData.navigationStart
+                };
+            }
+            
+            // 收集资源加载性能
+            if (window.performance.getEntriesByType) {
+                const resources = window.performance.getEntriesByType('resource');
+                // 只保留API相关的资源加载信息
+                data.networkInfo.apiResources = resources
+                    .filter(resource => 
+                        resource.name.includes('api') || 
+                        resource.name.includes('openai') || 
+                        resource.name.includes('deepseek') ||
+                        resource.name.includes('azure'))
+                    .map(resource => ({
+                        name: resource.name,
+                        duration: resource.duration,
+                        startTime: resource.startTime,
+                        responseEnd: resource.responseEnd
+                    }));
+            }
+        }
+    } catch (e) {
+        console.error('收集网络信息失败:', e);
+        data.networkInfoError = e.message;
+    }
+    
+    // 收集聊天模式历史
+    try {
+        if (window.chatModeHistory && Array.isArray(window.chatModeHistory)) {
+            data.chatModeHistory = window.chatModeHistory;
+        }
+    } catch (e) {
+        console.error('收集聊天模式历史失败:', e);
+        data.chatModeHistoryError = e.message;
+    }
+    
+    // 收集操作系统信息
+    try {
+        // 基本系统信息
+        data.osInfo = {
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
+            // 尝试解析用户代理获取更多信息
+            osName: getOSName(),
+            osVersion: getOSVersion(),
+            cpuCores: navigator.hardwareConcurrency || 'unknown',
+            deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'unknown',
+            touchPoints: navigator.maxTouchPoints || 0,
+            prefersDarkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+            pixelRatio: window.devicePixelRatio || 1
+        };
+        
+        // 尝试获取屏幕方向信息
+        if (window.screen && window.screen.orientation) {
+            data.osInfo.screenOrientation = window.screen.orientation.type;
+        }
+        
+        console.log('收集操作系统信息成功');
+    } catch (e) {
+        console.error('收集操作系统信息失败:', e);
+        data.osInfoError = e.message;
+    }
+    
+    // 收集错误日志
+    try {
+        // 从控制台错误中收集
+        if (window.consoleErrors && Array.isArray(window.consoleErrors)) {
+            data.errorLogs = window.consoleErrors;
+        }
+        
+        // 收集未捕获的异常
+        if (window.uncaughtErrors && Array.isArray(window.uncaughtErrors)) {
+            data.uncaughtErrors = window.uncaughtErrors;
+        }
+        
+        console.log('收集错误日志成功');
+    } catch (e) {
+        console.error('收集错误日志失败:', e);
+        data.errorLogsError = e.message;
+    }
+    
+    return data;
+}
+
+// 辅助函数 - 获取操作系统名称
+function getOSName() {
+    const userAgent = window.navigator.userAgent;
+    let osName = "未知";
+    
+    if (userAgent.indexOf("Windows NT") !== -1) {
+        osName = "Windows";
+    } else if (userAgent.indexOf("Mac OS X") !== -1) {
+        osName = "macOS";
+    } else if (userAgent.indexOf("Linux") !== -1) {
+        osName = "Linux";
+    } else if (userAgent.indexOf("iPhone") !== -1) {
+        osName = "iOS";
+    } else if (userAgent.indexOf("iPad") !== -1) {
+        osName = "iPadOS";
+    } else if (userAgent.indexOf("Android") !== -1) {
+        osName = "Android";
+    }
+    
+    return osName;
+}
+
+// 辅助函数 - 获取操作系统版本
+function getOSVersion() {
+    const userAgent = window.navigator.userAgent;
+    let osVersion = "未知";
+    
+    // Windows
+    if (userAgent.indexOf("Windows NT") !== -1) {
+        const ntVersion = userAgent.match(/Windows NT (\d+\.\d+)/);
+        if (ntVersion) {
+            const versionMap = {
+                "10.0": "Windows 10/11",
+                "6.3": "Windows 8.1",
+                "6.2": "Windows 8",
+                "6.1": "Windows 7",
+                "6.0": "Windows Vista",
+                "5.2": "Windows XP x64",
+                "5.1": "Windows XP",
+                "5.0": "Windows 2000"
+            };
+            osVersion = versionMap[ntVersion[1]] || `Windows NT ${ntVersion[1]}`;
+        }
+    } 
+    // macOS
+    else if (userAgent.indexOf("Mac OS X") !== -1) {
+        const macVersion = userAgent.match(/Mac OS X (\d+[._]\d+[._]?\d*)/);
+        if (macVersion) {
+            osVersion = `macOS ${macVersion[1].replace(/_/g, '.')}`;
+        }
+    } 
+    // iOS/iPadOS
+    else if (userAgent.indexOf("iPhone OS") !== -1 || userAgent.indexOf("iPad") !== -1) {
+        const iosVersion = userAgent.match(/OS (\d+[._]\d+[._]?\d*)/);
+        if (iosVersion) {
+            osVersion = `iOS ${iosVersion[1].replace(/_/g, '.')}`;
+        }
+    } 
+    // Android
+    else if (userAgent.indexOf("Android") !== -1) {
+        const androidVersion = userAgent.match(/Android (\d+[._]\d+[._]?\d*)/);
+        if (androidVersion) {
+            osVersion = `Android ${androidVersion[1]}`;
+        }
+    } 
+    // Linux
+    else if (userAgent.indexOf("Linux") !== -1) {
+        osVersion = "Linux";
+        // 尝试获取更具体的Linux发行版
+        if (userAgent.indexOf("Ubuntu") !== -1) {
+            osVersion += " (Ubuntu)";
+        } else if (userAgent.indexOf("Fedora") !== -1) {
+            osVersion += " (Fedora)";
+        }
+    }
+    
+    return osVersion;
+}
+
+// 格式化反馈数据为可读性好的文本
+function formatFeedbackLog(data) {
+    let log = `=========== 思维导图AI助手问题反馈日志 ===========\n`;
+    log += `生成时间: ${data.timestamp}\n\n`;
+    
+    // 添加操作系统信息
+    log += `===== 操作系统信息 =====\n`;
+    if (data.osInfo && Object.keys(data.osInfo).length > 0) {
+        for (const [key, value] of Object.entries(data.osInfo)) {
+            log += `${key}: ${value}\n`;
+        }
+    } else {
+        log += `无法获取操作系统信息\n`;
+    }
+    log += '\n';
+    
+    // 添加浏览器信息
+    log += `===== 浏览器信息 =====\n`;
+    for (const [key, value] of Object.entries(data.browserInfo)) {
+        log += `${key}: ${value}\n`;
+    }
+    log += '\n';
+    
+    // 添加会话信息
+    log += `===== 会话信息 =====\n`;
+    for (const [key, value] of Object.entries(data.sessionInfo)) {
+        log += `${key}: ${value}\n`;
+    }
+    log += '\n';
+    
+    // 添加网络信息
+    log += `===== 网络信息 =====\n`;
+    log += `在线状态: ${data.networkInfo.online}\n`;
+    
+    if (data.networkInfo.connection) {
+        log += `网络类型: ${data.networkInfo.connection.effectiveType}\n`;
+        log += `下行链路速度: ${data.networkInfo.connection.downlink} Mbps\n`;
+        log += `往返时间: ${data.networkInfo.connection.rtt} ms\n`;
+        log += `省流模式: ${data.networkInfo.connection.saveData}\n`;
+    }
+    
+    if (data.networkInfo.performance) {
+        log += `\n性能数据:\n`;
+        for (const [key, value] of Object.entries(data.networkInfo.performance)) {
+            log += `  ${key}: ${value} ms\n`;
+        }
+    }
+    
+    if (data.networkInfo.apiResources && data.networkInfo.apiResources.length > 0) {
+        log += `\nAPI资源加载性能:\n`;
+        data.networkInfo.apiResources.forEach((resource, index) => {
+            log += `  [${index + 1}] ${resource.name}\n`;
+            log += `      加载时间: ${resource.duration.toFixed(2)} ms\n`;
+        });
+    }
+    log += '\n';
+    
+    // 添加API统计
+    log += `===== API调用统计 =====\n`;
+    if (data.apiStats && data.apiStats.length > 0) {
+        data.apiStats.forEach((stat, index) => {
+            log += `请求 ${index + 1}:\n`;
+            for (const [key, value] of Object.entries(stat)) {
+                if (typeof value === 'object') {
+                    log += `  ${key}:\n`;
+                    for (const [subKey, subValue] of Object.entries(value)) {
+                        log += `    ${subKey}: ${subValue}\n`;
+                    }
+                } else {
+                    log += `  ${key}: ${value}\n`;
+                }
+            }
+            log += '\n';
+        });
+    } else {
+        log += `无API调用记录\n\n`;
+    }
+    
+    // 添加聊天模式历史
+    log += `===== 聊天模式历史 =====\n`;
+    if (data.chatModeHistory && data.chatModeHistory.length > 0) {
+        data.chatModeHistory.forEach((entry, index) => {
+            log += `[${index + 1}] ${entry.timestamp} - 模式: ${entry.mode}\n`;
+        });
+    } else {
+        log += `无聊天模式切换记录\n`;
+    }
+    log += '\n';
+    
+    // 添加错误日志
+    log += `===== 错误日志 =====\n`;
+    if (data.errorLogs && data.errorLogs.length > 0) {
+        data.errorLogs.forEach((error, index) => {
+            log += `[${index + 1}] ${error.timestamp || '未知时间'}\n`;
+            log += `  消息: ${error.message || '未知错误'}\n`;
+            if (error.stack) {
+                log += `  堆栈: ${error.stack}\n`;
+            }
+            if (error.url) {
+                log += `  URL: ${error.url}\n`;
+            }
+            log += '\n';
+        });
+    } else if (data.uncaughtErrors && data.uncaughtErrors.length > 0) {
+        data.uncaughtErrors.forEach((error, index) => {
+            log += `[${index + 1}] ${error.timestamp || '未知时间'}\n`;
+            log += `  消息: ${error.message || '未知错误'}\n`;
+            if (error.stack) {
+                log += `  堆栈: ${error.stack}\n`;
+            }
+            if (error.url) {
+                log += `  URL: ${error.url}\n`;
+            }
+            log += '\n';
+        });
+    } else {
+        log += `无错误日志记录\n`;
+    }
+    log += '\n';
+    
+    // 添加对话历史
+    log += `===== 对话历史 =====\n`;
+    if (data.chatHistory && data.chatHistory.length > 0) {
+        data.chatHistory.forEach((msg, index) => {
+            log += `[${msg.type.toUpperCase()}] ${msg.timestamp || ''}\n`;
+            log += `${msg.text}\n\n`;
+        });
+    } else {
+        log += `无对话历史记录\n\n`;
+    }
+    
+    // 添加思维导图数据
+    log += `===== 思维导图数据 =====\n`;
+    if (data.mindmap) {
+        log += JSON.stringify(data.mindmap, null, 2);
+    } else {
+        log += `无思维导图数据\n`;
+    }
+    
+    return log;
+}
+
 // 导出成员到全局
 window.saveAsJson = saveAsJson;
 window.loadMindMap = loadMindMap;
 window.exportToMarkdown = exportToMarkdown;
-window.importFromMarkdown = importFromMarkdown; 
+window.importFromMarkdown = importFromMarkdown;
+window.exportFeedbackLog = exportFeedbackLog; 

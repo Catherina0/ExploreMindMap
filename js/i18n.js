@@ -46,6 +46,7 @@ const translations = {
         'export_as_markdown': '导出为Markdown',
         'load_json_file': '加载JSON文件',
         'import_markdown': '导入Markdown',
+        'export_feedback': '导出问题反馈',
         
         // 主题
         'select_theme': '选择主题',
@@ -175,6 +176,7 @@ const translations = {
         'export_as_markdown': 'Export as Markdown',
         'load_json_file': 'Load JSON File',
         'import_markdown': 'Import Markdown',
+        'export_feedback': 'Export Feedback',
         
         // Themes
         'select_theme': 'Select Theme',

@@ -447,3 +447,23 @@ html[lang="en"] .toolbar .btn {
 .azure-settings {
     display: none;
 }
+
+/* 导出问题反馈按钮样式 */
+#export_feedback {
+    position: relative;
+}
+
+#export_feedback i.fa-bug {
+    color: #e91e63; /* 使用醒目的粉红色 */
+}
+
+#export_feedback:hover i.fa-bug {
+    animation: wiggle 0.5s ease;
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(0); }
+    75% { transform: rotate(5deg); }
+}

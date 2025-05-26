@@ -8,9 +8,12 @@
 // - jm
 // 本文件还依赖ai-prompts.js中定义的提示词模块
 
-const MAX_CONTEXT_LENGTH = 10; // 最大上下文长度
+const MAX_CONTEXT_LENGTH = 30; // 最大上下文长度 - 保存更多轮对话以确保连贯性
 const MAX_RETRY_ATTEMPTS = 3;  // 最大重试次数
 const RETRY_DELAY = 5000;      // 重试延迟时间（毫秒）
+
+// 添加对话模式跟踪变量
+let currentChatMode = 'normal'; // 默认为普通对话模式
 
 // 更新加载状态
 function updateLoadingStatus(message, isRetry = false) {
@@ -1027,12 +1030,18 @@ async function requestMindmapModification() {
         "请帮我扩展当前选中的节点";
         
     if (conversationHistory.length > 0) {
-        for (let i = conversationHistory.length - 1; i >= 0; i--) {
-            if (conversationHistory[i].role === 'user') {
-                latestUserQuery = conversationHistory[i].content;
+        // 获取最近几轮对话以提供更好的上下文
+        const recentMessages = conversationHistory.slice(-Math.min(conversationHistory.length, MAX_CONTEXT_LENGTH));
+        
+        // 提取最新的用户消息
+        for (let i = recentMessages.length - 1; i >= 0; i--) {
+            if (recentMessages[i].role === 'user') {
+                latestUserQuery = recentMessages[i].content;
                 break;
             }
         }
+        
+        console.log(`使用最近${recentMessages.length}轮对话作为上下文`);
     }
     
     // 使用提示词模块生成修改提示词
@@ -1065,10 +1074,20 @@ async function requestMindmapModification() {
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
+            // 使用系统提示词和修改提示词，保留部分对话历史以提供上下文
             messages = [
-                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
-                { role: 'user', content: modificationPrompt }
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) }
             ];
+            
+            // 添加最近的对话历史以提供上下文（避免直接使用全部历史，可能超出长度限制）
+            if (conversationHistory.length > 0) {
+                const historyToInclude = conversationHistory.slice(-Math.min(MAX_CONTEXT_LENGTH, conversationHistory.length));
+                messages = messages.concat(historyToInclude);
+                console.log(`添加${historyToInclude.length}轮对话历史作为上下文`);
+            }
+            
+            // 添加修改请求
+            messages.push({ role: 'user', content: modificationPrompt });
             
             const requestData = {
                 endpoint: endpoint,
@@ -1310,10 +1329,20 @@ async function requestContentExpansion() {
         if (aiService === 'openai') {
             endpoint = 'https://api.openai.com/v1/chat/completions';
             
+            // 使用系统提示词和历史记录
             messages = [
-                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) },
-                { role: 'user', content: expansionPrompt }
+                { role: 'system', content: window.aiPrompts.getSystemPrompt(currentLang) }
             ];
+            
+            // 添加最近的对话历史以提供更好的上下文
+            if (conversationHistory.length > 0) {
+                const historyToInclude = conversationHistory.slice(-Math.min(MAX_CONTEXT_LENGTH, conversationHistory.length));
+                messages = messages.concat(historyToInclude);
+                console.log(`添加${historyToInclude.length}轮对话历史作为上下文`);
+            }
+            
+            // 添加扩展请求
+            messages.push({ role: 'user', content: expansionPrompt });
             
             const requestData = {
                 endpoint: endpoint,
@@ -1394,5 +1423,45 @@ async function requestContentExpansion() {
     } finally {
         document.getElementById('loading').style.display = 'none';
     }
+}
+
+// 在切换对话模式的地方添加模式记录
+function toggleAIMode() {
+    const aiToggleBtn = document.getElementById('ai_toggle');
+    if (!aiToggleBtn) return;
+    
+    // 切换模式
+    if (currentChatMode === 'mindmap') {
+        currentChatMode = 'chat';
+        aiToggleBtn.textContent = i18n.t('chat_mode');
+    } else {
+        currentChatMode = 'mindmap';
+        aiToggleBtn.textContent = i18n.t('mindmap_mode');
+    }
+    
+    // 记录模式切换事件
+    logChatModeChange(currentChatMode);
+    
+    // 更新UI
+    updateUIForCurrentMode();
+}
+
+// 记录对话模式变化
+function logChatModeChange(mode) {
+    if (!window.chatModeHistory) {
+        window.chatModeHistory = [];
+    }
+    
+    window.chatModeHistory.push({
+        timestamp: new Date().toISOString(),
+        mode: mode
+    });
+    
+    // 限制历史记录长度
+    if (window.chatModeHistory.length > 100) {
+        window.chatModeHistory = window.chatModeHistory.slice(-100);
+    }
+    
+    console.log(`对话模式已切换为: ${mode}`);
 }
 

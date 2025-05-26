@@ -142,7 +142,8 @@ function initToolbar() {
             'summary_button': 'fa-file-alt',
             'save_map': 'fa-save',
             'load_map': 'fa-folder-open',
-            'capture': 'fa-camera', 
+            'capture': 'fa-camera',
+            'export_feedback': 'fa-bug' // 添加导出问题反馈按钮的图标
         };
         
         // 创建图标和文本容器
@@ -297,6 +298,33 @@ function initToolbar() {
     
     // 添加导出为图片按钮
     fileGroup.appendChild(createButton('capture', 'save_as_image', 'save_as_image', window.exportAsImage));
+    
+    // 添加导出问题反馈按钮
+    fileGroup.appendChild(createButton('export_feedback', 'export_feedback', 'export_feedback', function() {
+        if (typeof window.exportFeedbackLog === 'function') {
+            // 检查是否已有错误日志，如果没有，尝试获取当前错误状态
+            try {
+                if ((!window.consoleErrors || window.consoleErrors.length === 0) && 
+                    (!window.uncaughtErrors || window.uncaughtErrors.length === 0)) {
+                    // 记录当前页面状态信息作为日志
+                    console.error('问题反馈：用户手动触发导出 - 当前页面状态', {
+                        timestamp: new Date().toISOString(),
+                        selectedNode: selectedNode ? selectedNode.id : 'none',
+                        jsmindInitialized: !!jm,
+                        aiAssistantEnabled: aiAssistantEnabled,
+                        domReady: document.readyState
+                    });
+                }
+            } catch (e) {
+                // 忽略获取状态时的错误
+            }
+            
+            // 导出日志
+            window.exportFeedbackLog();
+        } else {
+            alert('导出功能不可用，请刷新页面后重试');
+        }
+    }));
     
     // 添加主题选择器
     const themeGroup = document.createElement('div');

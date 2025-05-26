@@ -9,17 +9,97 @@ let aiAssistantEnabled = false;  // AI助手启用状态
 let conversationHistory = [];  // 对话历史
 let isFirstQuery = true;  // 是否是首次查询
 
- 
-// 捕获并处理资源加载错误
-window.addEventListener('error', function(e) {
-    // 检查错误是否来自Chrome扩展
-    if (e && e.target && e.target.src && e.target.src.indexOf('chrome-extension://') !== -1) {
-        // 阻止错误冒泡
-        e.stopPropagation();
-        // 阻止默认处理
-        e.preventDefault();
-        console.log('已屏蔽Chrome扩展相关错误:', e.target.src);
-        return true;
+// 全局变量 - 错误收集
+window.consoleErrors = [];  // 存储控制台错误
+window.uncaughtErrors = [];  // 存储未捕获的异常
+const MAX_ERROR_LOG_SIZE = 200;  // 最大错误日志条数
+
+// 拦截控制台错误并保存
+const originalConsoleError = console.error;
+console.error = function() {
+    // 调用原始的console.error
+    originalConsoleError.apply(console, arguments);
+    
+    // 将错误保存到全局数组
+    try {
+        const errorMessage = Array.from(arguments).join(' ');
+        window.consoleErrors.push({
+            timestamp: new Date().toISOString(),
+            message: errorMessage,
+            type: 'console.error'
+        });
+        
+        // 限制日志大小
+        if (window.consoleErrors.length > MAX_ERROR_LOG_SIZE) {
+            window.consoleErrors = window.consoleErrors.slice(-MAX_ERROR_LOG_SIZE);
+        }
+    } catch (e) {
+        // 不处理记录错误时的错误
+    }
+};
+
+// 捕获未处理的Promise异常
+window.addEventListener('unhandledrejection', function(event) {
+    try {
+        const errorInfo = {
+            timestamp: new Date().toISOString(),
+            message: event.reason ? (event.reason.message || String(event.reason)) : 'Unhandled Promise Rejection',
+            stack: event.reason && event.reason.stack,
+            type: 'unhandledrejection'
+        };
+        
+        window.uncaughtErrors.push(errorInfo);
+        
+        // 限制日志大小
+        if (window.uncaughtErrors.length > MAX_ERROR_LOG_SIZE) {
+            window.uncaughtErrors = window.uncaughtErrors.slice(-MAX_ERROR_LOG_SIZE);
+        }
+        
+        // 如果错误来自扩展，则阻止默认处理
+        if (event.reason && event.reason.message && 
+            (event.reason.message.indexOf('chrome-extension://') !== -1 || 
+             event.reason.message.indexOf('moz-extension://') !== -1)) {
+            event.preventDefault();
+            return true;
+        }
+    } catch (e) {
+        // 不处理记录错误时的错误
+    }
+});
+
+// 捕获所有未处理的错误
+window.addEventListener('error', function(event) {
+    try {
+        // 检查错误是否来自Chrome扩展
+        if (event && event.target && event.target.src && 
+            (event.target.src.indexOf('chrome-extension://') !== -1 || 
+             event.target.src.indexOf('moz-extension://') !== -1)) {
+            // 阻止错误冒泡和默认处理
+            event.stopPropagation();
+            event.preventDefault();
+            console.log('已屏蔽浏览器扩展相关错误:', event.target.src);
+            return true;
+        }
+        
+        // 对于非扩展错误，记录下来
+        const errorInfo = {
+            timestamp: new Date().toISOString(),
+            message: event.message || 'Unknown Error',
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            stack: event.error ? event.error.stack : null,
+            type: 'window.onerror'
+        };
+        
+        window.uncaughtErrors.push(errorInfo);
+        
+        // 限制日志大小
+        if (window.uncaughtErrors.length > MAX_ERROR_LOG_SIZE) {
+            window.uncaughtErrors = window.uncaughtErrors.slice(-MAX_ERROR_LOG_SIZE);
+        }
+    } catch (e) {
+        // 不处理记录错误时的错误
     }
 }, true); // 使用捕获阶段
 
@@ -687,28 +767,6 @@ function addNodeNote(nodeId, noteText) {
 // 导出功能到全局作用域
 window.addNodeNote = addNodeNote;
 
-// 在index.html中修改现有的错误处理代码
-window.addEventListener('error', function(e) {
-    // 增强扩展错误过滤
-    if (e && e.target && e.target.src && 
-        (e.target.src.indexOf('chrome-extension://') !== -1 || 
-         e.target.src.indexOf('moz-extension://') !== -1)) {
-        console.debug('已屏蔽浏览器扩展错误:', e.target.src);
-        e.stopPropagation();
-        e.preventDefault();
-        return true;
-    }
-}, true);
-
-// 添加资源加载错误监听
-window.addEventListener('unhandledrejection', function(event) {
-    if (event.reason && event.reason.message && 
-        event.reason.message.indexOf('chrome-extension://') !== -1) {
-        event.preventDefault();
-        return true;
-    }
-}, true);
-
 // 设置下拉菜单的智能定位
 function setupDropdownMenus() {
     console.log('设置下拉菜单的智能定位');
@@ -830,4 +888,35 @@ document.addEventListener('languageChanged', (event) => {
             }
         }, 100);
     }
+});
+
+// 页面加载完成后初始化
+document.addEventListener("DOMContentLoaded", function() {
+    // 初始化思维导图
+    initMindMap();
+    
+    // 初始化事件监听器
+    setupEventListeners();
+    
+    // 初始化国际化
+    initI18n();
+    
+    // 初始化菜单
+    if (typeof window.setupDropdownMenus === 'function') {
+        window.setupDropdownMenus();
+    }
+    
+    // 绑定问题反馈按钮事件
+    const feedbackBtn = document.getElementById('export_feedback');
+    if (feedbackBtn) {
+        feedbackBtn.addEventListener('click', function() {
+            if (typeof window.exportFeedbackLog === 'function') {
+                window.exportFeedbackLog();
+            } else {
+                alert('导出功能不可用，请刷新页面后重试');
+            }
+        });
+    }
+    
+    console.log('应用初始化完成');
 });

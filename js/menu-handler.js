@@ -90,4 +90,73 @@ function positionDropdown(trigger, dropdown) {
 }
 
 // 导出成员到全局
-window.setupDropdownMenus = setupDropdownMenus; 
+window.setupDropdownMenus = setupDropdownMenus;
+
+// 检查全局变量apiStats是否存在，如果不存在则创建
+if (!window.apiStats) {
+    window.apiStats = [];
+}
+
+// 收集API请求时间的函数
+function collectApiStats(endpoint, startTime, endTime, options) {
+    window.apiStats.push({
+        endpoint: endpoint,
+        duration: endTime - startTime,
+        timestamp: new Date().toISOString(),
+        requestOptions: options ? {
+            model: options.model,
+            hasMessages: !!options.messages,
+            messagesCount: options.messages ? options.messages.length : 0,
+            temperature: options.temperature,
+            max_tokens: options.max_tokens
+        } : null
+    });
+    
+    // 限制收集的统计数量，避免占用过多内存
+    if (window.apiStats.length > 100) {
+        window.apiStats = window.apiStats.slice(-100);
+    }
+}
+
+// 添加钩子来拦截OpenAI API调用
+const originalCreateCompletion = window.openaiApi.createCompletion;
+window.openaiApi.createCompletion = async function(options) {
+    const startTime = performance.now();
+    try {
+        const result = await originalCreateCompletion.apply(this, arguments);
+        const endTime = performance.now();
+        collectApiStats(options.endpoint, startTime, endTime, options);
+        return result;
+    } catch (error) {
+        const endTime = performance.now();
+        collectApiStats(options.endpoint, startTime, endTime, options);
+        throw error;
+    }
+};
+
+// 处理问题反馈按钮点击事件
+document.getElementById('export_feedback').addEventListener('click', function() {
+    if (typeof window.exportFeedbackLog === 'function') {
+        // 检查是否已有错误日志，如果没有，尝试获取当前错误状态
+        try {
+            if ((!window.consoleErrors || window.consoleErrors.length === 0) && 
+                (!window.uncaughtErrors || window.uncaughtErrors.length === 0)) {
+                // 记录当前页面状态信息作为日志
+                console.error('问题反馈：用户手动触发导出 - 当前页面状态', {
+                    timestamp: new Date().toISOString(),
+                    selectedNode: selectedNode ? selectedNode.id : 'none',
+                    jsmindInitialized: !!jm,
+                    aiAssistantEnabled: aiAssistantEnabled,
+                    domReady: document.readyState
+                });
+            }
+        } catch (e) {
+            // 忽略获取状态时的错误
+        }
+        
+        // 导出日志
+        window.exportFeedbackLog();
+    } else {
+        alert('导出功能不可用，请刷新页面后重试');
+    }
+}); 
